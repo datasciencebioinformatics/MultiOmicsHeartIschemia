@@ -1,0 +1,1958 @@
+library(doParallel)
+library(data.table)
+library(data.table)
+library(dplyr)
+library(formattable)
+library(tidyr)
+library(xlsx)
+library(Cairo)
+library(gtable)
+library(gridExtra)
+library(waffle)
+library(extrafont)
+library(ggplot2)
+library("plyr")
+library("pheatmap")
+library(gridExtra)
+library(grid)
+library(ggthemes)
+library(FactoMineR)
+library(ggrepel)
+library(ggforce)
+library(Cairo)
+source("/home/flealvalentim/scripts/RScript_PREMED_load_functions.R")
+source("/home/flealvalentim/scripts/Function_plot_Circos.R")
+source("/home/flealvalentim/scripts/Function_plot_Circos2.R")
+##########################################################################################################################################
+# Set output
+outputfolder="/home/flealvalentim/data/PREMED-CAD/"
+##########################################################################################################################################
+library("dendextend")
+library("viridis")
+# Load biomarkers dataset
+# Use only data for which the all datasets are present  as.vector(CAD_Patients_Age$ID_PATIENT)
+# Plot patients vs. biomarkers
+# Try clustering/non-clustering (ordering Ischemia/Sex)
+# Number of biomarkers
+# Process MRI data
+#Load patient data
+CAD_Biomarkers<-load_data_Biomarkers_complete_raw()
+
+##########################################################################################################################################
+# Percentage of complete data
+complete_data_per_variable<-data.frame(Biomarker=c(),completeness=c())
+
+# For each column, convert to numeric
+for (col_bio in colnames(CAD_Biomarkers))
+{		
+	# Percentage of complete data
+	complete_data_per_variable<-rbind(complete_data_per_variable,data.frame(Biomarker=c(col_bio),completeness=c(sum(!is.na(CAD_Biomarkers[,col_bio]))/length(CAD_Biomarkers[,col_bio])*100)))
+}
+rownames(complete_data_per_variable)<-complete_data_per_variable$Biomarker	
+
+# Sort completness table
+complete_data_per_variable<-complete_data_per_variable[order(complete_data_per_variable$completeness),]
+##########################################################################################################################################
+# For each 28 biomarkers: Gaussian Distribution
+# Outliers (IQR = 3)
+# PCA
+# Take patients ids
+patients_ids<-rownames(as.vector((CAD_Patients_Age[which(CAD_Patients_Age$Ischemia=="Yes"),])))
+# Take control ids
+control_ids<-rownames(as.vector((CAD_Patients_Age[which(CAD_Patients_Age$Ischemia=="No"),])))
+##########################################################################################################################################*
+# For each protein
+# t.test
+# Scale protein levels
+# Take expression levels
+df_result_t<-data.frame(Biomarker=c(),p.value=c())
+
+# Make copy of biomarker data
+CAD_Patients_Age<-load_data_Patients()
+
+CAD_Biomarkers<-load_data_Biomarkers_normalized_filtered()
+CAD_Biomarkers_log<-load_data_Biomarkers_lognormalized_filtered()
+##########################################################################################################################################
+library("dendextend")
+library("viridis")
+# Load biomarkers dataset
+# Use only data for which the all datasets are present  as.vector(CAD_Patients_Age$ID_PATIENT)
+# Plot patients vs. biomarkers
+# Try clustering/non-clustering (ordering Ischemia/Sex)
+# Number of biomarkers
+# Process MRI data
+#Load patient data
+
+#Load patient data
+CAD_Metabolites_logNormNoOutliers_batch_removal<-load_data_Metabolites_noOutilers_batch_removal_logNorm()
+
+#Load patient data
+CAD_Metabolites_logNormmeanCenteredNoOutliers<-load_data_Metabolites_noOutilers_logNorm_meanCentered()
+
+#Load patient data
+CAD_Metabolites_logNorm_NoOutliers<-load_data_Metabolites_noOutilers_logNorm()
+
+#Load patient data
+CAD_Metabolites_raw<-load_data_Metabolites_noOutilers_raw()
+
+# Load patient data
+CAD_Patients_Age<-load_patient_data_filtered()
+###################
+###################
+CAD_Metabolites_log<-CAD_Metabolites_logNorm_NoOutliers
+CAD_Metabolites<-CAD_Metabolites_logNormmeanCenteredNoOutliers
+##########################################################################################################################################
+library("dendextend")
+library("viridis")
+# Load biomarkers dataset
+# Use only data for which the all datasets are present  as.vector(CAD_Patients_Age$ID_PATIENT)
+# Plot patients vs. biomarkers
+# Try clustering/non-clustering (ordering Ischemia/Sex)
+# Number of biomarkers
+# Process MRI data
+
+#Load patient data
+CAD_microRNA_logNormmeanCenteredNoOutliers<-load_data_microRNA_noOutilers_logNorm_meanCentered()
+
+#Load patient data
+CAD_microRNA_logNorm_NoOutliers<-load_data_microRNA_noOutilers_logNorm()
+
+#Load patient data
+#Load patient data
+CAD_microRNA_logNormmeanCenteredNoOutliers<-t(CAD_microRNA_logNormmeanCenteredNoOutliers)
+
+#Load patient data
+CAD_microRNA_logNorm_NoOutliers<-t(CAD_microRNA_logNorm_NoOutliers)
+
+# Load patient data
+CAD_Patients_Age<-load_patient_data_filtered()
+
+
+###################
+CAD_microRNAs_log<-CAD_microRNA_logNorm_NoOutliers
+CAD_microRNAs<-CAD_microRNA_logNormmeanCenteredNoOutliers
+
+##########################################################################################################################################
+# DE molecules
+DE_molecules_biomarker<-colnames(CAD_Biomarkers)
+DE_molecules_microRNA<-as.vector(read.xlsx(paste(outputfolder,"/DE_microRNA.xlsx",sep=""),startRow = 1, sheetIndex=1)[,1])
+DE_molecules_metabolites<-gsub("`","",as.vector(read.xlsx(paste(outputfolder,"/DE_Metabolites.xlsx",sep=""),startRow = 1, sheetIndex=1)[,1]))
+
+# Intersecton of patients
+ID_intersect<-intersect(intersect(rownames(CAD_Biomarkers_log),rownames(CAD_Metabolites_log)),rownames(CAD_microRNAs_log))
+
+##########################################################################################################################################
+# Take the log expression of each molecule and put it together
+joint_molecules_multiblock1<-cbind(CAD_microRNAs[ID_intersect,],
+CAD_Biomarkers[ID_intersect,],
+CAD_Metabolites[ID_intersect,])
+
+# Take the log expression of each molecule and put it together
+joint_molecules_multiblock1_log<-cbind(CAD_microRNAs_log[ID_intersect,],
+CAD_Biomarkers_log[ID_intersect,],
+CAD_Metabolites_log[ID_intersect,])
+
+# Take the log expression of each molecule and put it together
+joint_molecules_multiblock2<-cbind(CAD_microRNAs[ID_intersect,DE_molecules_microRNA],
+CAD_Biomarkers[ID_intersect,DE_molecules_biomarker],
+CAD_Metabolites[ID_intersect,DE_molecules_metabolites])
+
+# Take the log expression of each molecule and put it together
+joint_molecules_multiblock2_log<-cbind(CAD_microRNAs_log[ID_intersect,DE_molecules_microRNA],
+CAD_Biomarkers_log[ID_intersect,DE_molecules_biomarker],
+CAD_Metabolites_log[ID_intersect,DE_molecules_metabolites])
+
+##########################################################################################################################################
+# Merge tables
+joint_molecules_logMeanCenter_multiblock1_work<-merge(data.frame(joint_molecules_multiblock1,ID=rownames(joint_molecules_multiblock1)),data.frame(CAD_Patients_Age,ID=rownames(CAD_Patients_Age)),by="ID")
+
+# Set rownames(CAD_Biomarkers_work)
+rownames(joint_molecules_logMeanCenter_multiblock1_work)<-as.vector(joint_molecules_logMeanCenter_multiblock1_work$ID)
+
+# Remove col ID
+joint_molecules_logMeanCenter_multiblock1_work<-joint_molecules_logMeanCenter_multiblock1_work[,-c(1)]
+
+# Rename columns
+colnames(joint_molecules_logMeanCenter_multiblock1_work)[1:dim(joint_molecules_multiblock1)[2]]<-colnames(joint_molecules_multiblock1)
+
+# Merge tables
+joint_molecules_logMeanCenter_multiblock2_work<-merge(data.frame(joint_molecules_multiblock2,ID=rownames(joint_molecules_multiblock2)),data.frame(CAD_Patients_Age,ID=rownames(CAD_Patients_Age)),by="ID")
+
+# Set rownames(CAD_Biomarkers_work)
+rownames(joint_molecules_logMeanCenter_multiblock2_work)<-as.vector(joint_molecules_logMeanCenter_multiblock2_work$ID)
+
+# Remove col ID
+joint_molecules_logMeanCenter_multiblock2_work<-joint_molecules_logMeanCenter_multiblock1_work[,-c(1)]
+
+# Rename columns
+colnames(joint_molecules_logMeanCenter_multiblock2_work)[1:dim(joint_molecules_multiblock2)[2]]<-colnames(joint_molecules_multiblock2)
+
+
+##########################################################################################################################################
+# Save data
+saveRDS(joint_molecules_logMeanCenter_multiblock1_work, file = paste(outputfolder,paste("joint_molecules_logMeanCenter_multiblock1_work","",".rds",sep=""),sep="/"))
+saveRDS(joint_molecules_logMeanCenter_multiblock2_work, file = paste(outputfolder,paste("joint_molecules_logMeanCenter_multiblock2_work","",".rds",sep=""),sep="/"))
+
+saveRDS(joint_molecules_multiblock1, file = paste(outputfolder,paste("joint_molecules_multiblock1","",".rds",sep=""),sep="/"))
+saveRDS(joint_molecules_multiblock2, file = paste(outputfolder,paste("joint_molecules_multiblock2","",".rds",sep=""),sep="/"))
+
+##########################################################################################################################################
+# Save data
+joint_molecules_logMeanCenter_multiblock1_work<-readRDS(file = "/home/flealvalentim/data/PREMED-CAD//joint_molecules_logMeanCenter_multiblock1_work.rds")
+joint_molecules_logMeanCenter_multiblock2_work<-readRDS(file = "/home/flealvalentim/data/PREMED-CAD/joint_molecules_logMeanCenter_multiblock2_work.rds")
+joint_molecules_multiblock1<-readRDS(file = "/home/flealvalentim/data/PREMED-CAD/joint_molecules_multiblock1.rds")
+joint_molecules_multiblock2<-readRDS(file = "/home/flealvalentim/data/PREMED-CAD/joint_molecules_multiblock2.rds")
+
+##########################################################################################################################################
+library("VSURF")
+library(randomForest)
+library(caret)
+library("Boruta")
+
+##########################################################################################################################################
+# Random forest model
+# train model
+control <- trainControl(method="boot", number=100)
+tunegrid <- expand.grid(.mtry=round(seq(from=1,to=50,by=5)))
+
+
+set.seed(121321321)
+custom_multiblock1 <- train(as.formula(paste("Ischemia ~ Age + Sex + DMT2_known + ",paste(paste0(as.vector(df_id_replacement1$Replacement),collapse=" + "),sep=" + "))), data=joint_molecules_logMeanCenter_multiblock1_work,method="rf",metric="Accuracy", tuneGrid=tunegrid, trControl=control,ntree = 500)
+custom_multiblock2 <- train(as.formula(paste("Ischemia ~ Age + Sex + DMT2_known + ",paste(paste0(as.vector(df_id_replacement2$Replacement),collapse=" + "),sep=" + "))), data=joint_molecules_logMeanCenter_multiblock2_work,method="rf",metric="Accuracy", tuneGrid=tunegrid, trControl=control,ntree = 500)
+
+
+
+# filter only different than 1
+custom_multiblock1_filtered<-custom_multiblock1$results[which(custom_multiblock1$results$mtry!=1),]
+print(custom_multiblock1_filtered[which.max(custom_multiblock1_filtered$Accuracy),])
+
+# Create the plot
+print(paste(outputfolder,paste("parameter_optimization_multiblock1.png",sep=""),sep="/"))
+Cairo(width = 7.0, height = 7.0, units = 'in', res = 600, file=paste(outputfolder,paste("parameter_optimization_multiblock1.png",sep=""),sep="/"), type="png", bg="white")					
+	print(custom_multiblock1$results[which.max(custom_multiblock1$results[which(custom_multiblock1$results$mtry!=1),"Accuracy"]),])
+	print(custom_multiblock2$bestTune)
+	plot(custom_multiblock1)
+dev.off()
+
+# filter only different than 1
+custom_multiblock2_filtered<-custom_multiblock2$results[which(custom_multiblock2$results$mtry!=1),]
+print(custom_multiblock2_filtered[which.max(custom_multiblock2_filtered$Accuracy),])
+
+# Create the plot
+print(paste(outputfolder,paste("parameter_optimization_multiblock2.png",sep=""),sep="/"))
+Cairo(width = 7.0, height = 7.0, units = 'in', res = 600, file=paste(outputfolder,paste("parameter_optimization_multiblock2.png",sep=""),sep="/"), type="png", bg="white")				
+	print(custom_multiblock2$bestTune)
+	plot(custom_multiblock1)
+dev.off()
+##########################################################################################################################################
+# Save data
+joint_molecules_logMeanCenter_multiblock1_work<-readRDS(file = "C:/Users/fv2/Documents/joint_molecules_logMeanCenter_multiblock1_work.rds")
+joint_molecules_logMeanCenter_multiblock2_work<-readRDS(file = "C:/Users/fv2/Documents/joint_molecules_logMeanCenter_multiblock2_work.rds")
+joint_molecules_multiblock1<-readRDS(file = "C:/Users/fv2/Documents/joint_molecules_multiblock1.rds")
+joint_molecules_multiblock2<-readRDS(file = "C:/Users/fv2/Documents/joint_molecules_multiblock2.rds")
+
+
+##########################################################################################################################################
+# Run random forest for first block
+# Relace * in the colnames
+df_id_replacement<-data.frame(ID=colnames(joint_molecules_multiblock1),Replacement=gsub("\\*","b",gsub("\\-","_",colnames(joint_molecules_multiblock1))))
+
+# Rownames
+rownames(df_id_replacement)<-df_id_replacement$ID
+
+# Replace colnames
+colnames(joint_molecules_logMeanCenter_multiblock1_work)[which(colnames(joint_molecules_logMeanCenter_multiblock1_work) %in% df_id_replacement$ID)]<-as.vector(df_id_replacement[colnames(joint_molecules_logMeanCenter_multiblock1_work)[which(colnames(joint_molecules_logMeanCenter_multiblock1_work) %in% df_id_replacement$ID)],"Replacement"])
+
+# Run buruta for variable selection
+set.seed(10)
+boruta_multiblock1<-Boruta(as.formula(paste("Ischemia ~ Age + Sex + DMT2_known + ", paste0(as.vector(df_id_replacement$Replacement),collapse=" + "))), data=joint_molecules_logMeanCenter_multiblock1_work,pValue=0.001,maxRuns = 10000)
+boruta_multiblock1$finalDecision[which(boruta_multiblock1$finalDecision=="Confirmed")]
+
+# Run vsurf
+set.seed(10)
+vsurf_multiblock1<-VSURF(formula=as.formula(paste("Ischemia ~ Age + Sex + DMT2_known + ", paste0(as.vector(df_id_replacement$Replacement),collapse=" + "))), data=joint_molecules_logMeanCenter_multiblock1_work)
+
+# Get list of variables
+unlist(attr(vsurf_multiblock1$terms[vsurf_multiblock1$varselect.interp],"variables"))
+
+# Create the plot
+print(paste(outputfolder,paste("boruta_multiblock1.png",sep=""),sep="/"))
+Cairo(width = 20.0, height = 7.0, units = 'in', res = 600, file=paste(outputfolder,paste("boruta_multiblock1.png",sep=""),sep="/"), type="png", bg="white")					
+	plot(boruta_multiblock1)
+dev.off()
+
+
+##########################################################################################################################################
+# Run random forest for first block
+# Relace * in the colnames
+df_id_replacement<-data.frame(ID=colnames(joint_molecules_multiblock2),Replacement=gsub("\\*","b",gsub("\\-","_",colnames(joint_molecules_multiblock2))))
+
+# Rownames
+rownames(df_id_replacement)<-df_id_replacement$ID
+
+# Replace colnames
+colnames(joint_molecules_logMeanCenter_multiblock2_work)[which(colnames(joint_molecules_logMeanCenter_multiblock2_work) %in% df_id_replacement$ID)]<-as.vector(df_id_replacement[colnames(joint_molecules_logMeanCenter_multiblock2_work)[which(colnames(joint_molecules_logMeanCenter_multiblock2_work) %in% df_id_replacement$ID)],"Replacement"])
+
+
+# Run buruta for variable selection
+set.seed(10)
+boruta_multiblock2<-Boruta(as.formula(paste("Ischemia ~ Age + Sex + DMT2_known + ", paste0(as.vector(df_id_replacement$Replacement),collapse=" + "))), data=joint_molecules_logMeanCenter_multiblock2_work,pValue=0.001,maxRuns = 10000)
+boruta_multiblock2$finalDecision[which(boruta_multiblock2$finalDecision=="Confirmed")]
+
+# Run vsurf
+vsurf_multiblock2<-VSURF(as.formula(paste("Ischemia ~ Age + Sex + DMT2_known + ", paste0(as.vector(df_id_replacement$Replacement),collapse=" + "))), data=joint_molecules_logMeanCenter_multiblock2_work)
+
+# Get list of variables
+unlist(attr(vsurf_multiblock2$terms[vsurf_multiblock2$varselect.interp],"variables"))
+
+# Create the plot
+print(paste(outputfolder,paste("boruta_multiblock2.png",sep=""),sep="/"))
+Cairo(width = 20.0, height = 7.0, units = 'in', res = 600, file=paste(outputfolder,paste("boruta_multiblock2.png",sep=""),sep="/"), type="png", bg="white")					
+	plot(boruta_multiblock2)
+dev.off()
+
+##########################################################################################################################################
+# Relace * in the colnames
+df_id_replacement1<-data.frame(ID=colnames(joint_molecules_multiblock1),Replacement=gsub("\\*","b",gsub("\\-","_",colnames(joint_molecules_multiblock1))))
+
+# Rownames
+rownames(df_id_replacement1)<-df_id_replacement1$ID
+
+# Relace * in the colnames
+df_id_replacement2<-data.frame(ID=colnames(joint_molecules_multiblock2),Replacement=gsub("\\*","b",gsub("\\-","_",colnames(joint_molecules_multiblock2))))
+
+# Rownames
+rownames(df_id_replacement2)<-df_id_replacement2$ID
+##########################################################################################################################################
+# Compute variable importance analysis
+# Variable importance analysis on multiblock1
+
+# Load library
+library("randomForestExplainer")
+library("randomForest")
+
+# Grep biomolecules
+biomolecules<-colnames(header)[!grepl(":",colnames(header))]
+
+# Filter biomolecules
+biomolecules<-biomolecules[!biomolecules %in% c("Age","Signature","n","AUC","DMT2","Smoking","Sex")]
+
+##########################################################################################################################################
+# Intersecton of patients
+ID_intersect<-intersect(intersect(rownames(CAD_Biomarkers_log),rownames(CAD_Metabolites_log)),rownames(CAD_microRNAs_log))
+
+# Take the log expression of each molecule and put it together
+joint_molecules_log<-cbind(CAD_microRNAs_log[ID_intersect,],
+CAD_Biomarkers_log[ID_intersect,],
+CAD_Metabolites_log[ID_intersect,])
+
+# Take the log expression of each molecule and put it together
+joint_molecules_log<-cbind(CAD_microRNAs_log[ID_intersect,DE_molecules_microRNA],
+CAD_Biomarkers_log[ID_intersect,DE_molecules_biomarker],
+CAD_Metabolites_log[ID_intersect,DE_molecules_metabolites])
+
+# Filter biomolecules
+joint_molecules_log<-joint_molecules_log[,biomolecules]
+
+# Start log mean centered table
+#joint_molecules_logMeanCenter<-joint_molecules_log[,biomolecules]
+joint_molecules_logMeanCenter<-joint_molecules_log[,biomolecules]
+
+# Perform mean-centering
+# Center for each variable 
+for (molecule in colnames(joint_molecules_log))
+{
+	# mean centering
+	joint_molecules_logMeanCenter[,molecule]<-(joint_molecules_log[,molecule]-mean(joint_molecules_log[,molecule]))/sd(joint_molecules_log[,molecule])
+}
+
+
+# Merge tables
+joint_molecules_logMeanCenter_work<-merge(data.frame(joint_molecules_logMeanCenter,ID=rownames(joint_molecules_logMeanCenter)),data.frame(CAD_Patients_Age[,c("Sex","Age","DMT2_known","Smoking_known","Ischemia")],ID=rownames(CAD_Patients_Age)),by="ID")
+
+# Set rownames(CAD_Biomarkers_work)
+rownames(joint_molecules_logMeanCenter_work)<-as.vector(joint_molecules_logMeanCenter_work$ID)
+
+# Remove col ID
+joint_molecules_logMeanCenter_work<-joint_molecules_logMeanCenter_work[,-c(1)]
+
+# Set colnames
+colnames(joint_molecules_logMeanCenter_work)[1:dim(joint_molecules_logMeanCenter)[2]]<-colnames(joint_molecules_logMeanCenter)
+##########################################################################################################################################
+# Relace * in the colnames
+df_id_replacement<-data.frame(ID=colnames(joint_molecules_logMeanCenter),Replacement=gsub("\\*","b",gsub("\\-","_",colnames(joint_molecules_logMeanCenter))))
+
+# Rownames
+rownames(df_id_replacement)<-df_id_replacement$ID
+#########################################################################################################################################
+# Reset colnames
+colnames(joint_molecules_logMeanCenter_work)<-gsub("\\*","b",gsub("\\-","_",colnames(joint_molecules_logMeanCenter_work)))
+
+# Rename
+biomolecules<-gsub("\\*","b",gsub("\\-","_",biomolecules))
+#########################################################################################################################################
+# Save all variables
+# save biomolecules
+# save joint_molecules_logMeanCenter_work
+# Save data
+saveRDS(biomolecules, file = paste(outputfolder,paste("biomolecules2","",".rds",sep=""),sep="/"))
+saveRDS(joint_molecules_logMeanCenter_work, file = paste(outputfolder,paste("joint_molecules_logMeanCenter_work2","",".rds",sep=""),sep="/"))
+
+biomolecules<-readRDS(file = "C:/Users/fv2/Documents/biomolecules2.rds")
+joint_molecules_logMeanCenter_work<-readRDS(file = "C:/Users/fv2/Documents/joint_molecules_logMeanCenter_work2.rds")
+
+# Take the raw values
+#joint_molecules_logMeanCenter_work_raw<-readRDS(file = "C:/Users/fv2/Documents/joint_molecules_logMeanCenter_work2.rds")
+
+#########################################################################################################################################
+# Load library
+library("randomForestExplainer")
+library("randomForest")
+
+#formula=as.formula("Ischemia ~ Age + Sex + hsTroponinI + HDLCholesterin + LDLCholesterin + Glucose + PC_aa_C32_3 + PC_aa_C36_6 + PC_aa_C38_4 + PC_ae_C32_1 + PC_ae_C32_2 + PC_ae_C34_3 + PC_ae_C36_1 + PC_ae_C36_5 + PC_ae_C40_2 + lysoPC_a_C18_1 + lysoPC_a_C18_2 + SM_OH_C16_1 + SM_C26_1 + hsa_miR_10a + hsa_miR_183 + hsa_miR_1274b + PC_ae_C42_2 + SM_OH_C14_1 + SM_OH_C22_2 + PC_aa_C28_1 + hsa_miR_500b + hsa_miR_146b_5p + PC_ae_C38_6 + PC_ae_C36_2 + hsa_miR_335 + C12_1 + Pro_BNP + PC_ae_C36_3 + SM_C26_0 + Hexose + hsa_miR_212 + SM_OH_C24_1 + SM_OH_C22_1 + SM_C24_0 + PC_ae_C34_2 + Cholesterin + hsa_miR_660 + hsa_miR_502_5p + hsa_miR_1914b + CRP + Insulin + SM_C24_1 + PC_aa_C42_2 + PC_ae_C30_2 + SM_C16_0 + SM_C16_1 + SDF_1a")
+#as.formula(paste("Ischemia ~ ", paste(as.vector(colnames(joint_molecules_logMeanCenter_work)[!colnames(joint_molecules_logMeanCenter_work) %in% c("Ischemia")]),collapse=" + ")))
+# Execute randomForest
+forest<-randomForest(Ischemia ~ Age + Sex + hsTroponinI + HDLCholesterin + LDLCholesterin + Glucose + PC_aa_C32_3 + PC_aa_C36_6 + PC_aa_C38_4 + PC_ae_C32_1 + PC_ae_C32_2 + PC_ae_C34_3 + PC_ae_C36_1 + PC_ae_C36_5 + PC_ae_C40_2 + lysoPC_a_C18_1 + lysoPC_a_C18_2 + SM_OH_C16_1 + SM_C26_1 + hsa_miR_10a + hsa_miR_183 + hsa_miR_1274b + PC_ae_C42_2 + SM_OH_C14_1 + SM_OH_C22_2 + PC_aa_C28_1 + hsa_miR_500b + hsa_miR_146b_5p + PC_ae_C38_6 + PC_ae_C36_2 + hsa_miR_335 + C12_1 + Pro_BNP + PC_ae_C36_3 + SM_C26_0 + Hexose + hsa_miR_212 + SM_OH_C24_1 + SM_OH_C22_1 + SM_C24_0 + PC_ae_C34_2 + Cholesterin + hsa_miR_660 + hsa_miR_502_5p + hsa_miR_1914b + CRP + Insulin + SM_C24_1 + PC_aa_C42_2 + PC_ae_C30_2 + SM_C16_0 + SM_C16_1 + SDF_1a,data=joint_molecules_logMeanCenter_work,localImp=TRUE,ntree = 1000,mtry=6)
+forest<-randomForest(Ischemia ~ ebv_miR_BART13 + hsa_let_7a + hsa_let_7ab + hsa_let_7b + hsa_let_7bb + hsa_let_7c + hsa_let_7d + hsa_let_7db + hsa_let_7e + hsa_let_7f + hsa_let_7f_1b + hsa_let_7f_2b + hsa_let_7g + hsa_let_7i + hsa_let_7ib + hsa_miR_100 + hsa_miR_101 + hsa_miR_101b + hsa_miR_103 + hsa_miR_103_2b + hsa_miR_106ab + hsa_miR_106b + hsa_miR_106bb + hsa_miR_107 + hsa_miR_10a + hsa_miR_10b + hsa_miR_1202 + hsa_miR_1207_5p + hsa_miR_1225_3p + hsa_miR_1225_5p + hsa_miR_1227 + hsa_miR_1228 + hsa_miR_1234 + hsa_miR_1237 + hsa_miR_1238 + hsa_miR_1246 + hsa_miR_1249 + hsa_miR_1255a + hsa_miR_1255b + hsa_miR_125a_3p + hsa_miR_125a_5p + hsa_miR_125b + hsa_miR_126 + hsa_miR_126b + hsa_miR_1260 + hsa_miR_1260b + hsa_miR_1268 + hsa_miR_1270 + hsa_miR_1271 + hsa_miR_1274a + hsa_miR_1274b + hsa_miR_1275 + hsa_miR_128 + hsa_miR_1280 + hsa_miR_1281 + hsa_miR_1285 + hsa_miR_1288 + hsa_miR_129b + hsa_miR_129_3p + hsa_miR_1305 + hsa_miR_1307 + hsa_miR_130a + hsa_miR_130b + hsa_miR_130bb + hsa_miR_132 + hsa_miR_133b + hsa_miR_134 + hsa_miR_136 + hsa_miR_139_3p + hsa_miR_139_5p + hsa_miR_140_3p + hsa_miR_140_5p + hsa_miR_141 + hsa_miR_142_3p + hsa_miR_142_5p + hsa_miR_143 + hsa_miR_144 + hsa_miR_144b + hsa_miR_145 + hsa_miR_146a + hsa_miR_146b_5p + hsa_miR_148a + hsa_miR_148ab + hsa_miR_148b + hsa_miR_148bb + hsa_miR_149 + hsa_miR_150 + hsa_miR_150b + hsa_miR_151_3p + hsa_miR_151_5p + hsa_miR_152 + hsa_miR_1539 + hsa_miR_155 + hsa_miR_15a + hsa_miR_15ab + hsa_miR_15b + hsa_miR_15bb + hsa_miR_16 + hsa_miR_16_2b + hsa_miR_17 + hsa_miR_17b + hsa_miR_181a + hsa_miR_181ab + hsa_miR_181a_2b + hsa_miR_181b + hsa_miR_181c + hsa_miR_181cb + hsa_miR_182 + hsa_miR_182b + hsa_miR_1825 + hsa_miR_183 + hsa_miR_183b + hsa_miR_185 + hsa_miR_186 + hsa_miR_188_3p + hsa_miR_188_5p + hsa_miR_18a + hsa_miR_18b + hsa_miR_190 + hsa_miR_191 + hsa_miR_191b + hsa_miR_1914b + hsa_miR_1915 + hsa_miR_192 + hsa_miR_192b + hsa_miR_193a_3p + hsa_miR_193a_5p + hsa_miR_193b + hsa_miR_194 + hsa_miR_195 + hsa_miR_196b + hsa_miR_197 + hsa_miR_1973 + hsa_miR_199a_3p + hsa_miR_199a_5p + hsa_miR_199b_5p + hsa_miR_19a + hsa_miR_19b + hsa_miR_19b_1b + hsa_miR_200b + hsa_miR_200c + hsa_miR_20a + hsa_miR_20ab + hsa_miR_20b + hsa_miR_21 + hsa_miR_21b + hsa_miR_210 + hsa_miR_2115 + hsa_miR_2116b + hsa_miR_212 + hsa_miR_215 + hsa_miR_219_5p + hsa_miR_22 + hsa_miR_22b + hsa_miR_221 + hsa_miR_221b + hsa_miR_222 + hsa_miR_223 + hsa_miR_223b + hsa_miR_2355_5p + hsa_miR_23a + hsa_miR_23b + hsa_miR_23c + hsa_miR_24 + hsa_miR_25 + hsa_miR_25b + hsa_miR_26a + hsa_miR_26a_1b + hsa_miR_26b + hsa_miR_26bb + hsa_miR_27a + hsa_miR_27b + hsa_miR_28_5p + hsa_miR_2861 + hsa_miR_296_5p + hsa_miR_299_5p + hsa_miR_29a + hsa_miR_29b + hsa_miR_29b_2b + hsa_miR_29c + hsa_miR_29cb + hsa_miR_301a + hsa_miR_301b + hsa_miR_30a + hsa_miR_30b + hsa_miR_30c + hsa_miR_30c_1b + hsa_miR_30d + hsa_miR_30e + hsa_miR_30eb + hsa_miR_3125 + hsa_miR_3127 + hsa_miR_3141 + hsa_miR_3156 + hsa_miR_3162 + hsa_miR_3163 + hsa_miR_3180_3p + hsa_miR_3180_5p + hsa_miR_3195 + hsa_miR_3196 + hsa_miR_3198 + hsa_miR_32 + hsa_miR_3200_3p + hsa_miR_3200_5p + hsa_miR_320a + hsa_miR_320b + hsa_miR_320c + hsa_miR_320d + hsa_miR_320e + hsa_miR_324_3p + hsa_miR_324_5p + hsa_miR_326 + hsa_miR_328 + hsa_miR_329 + hsa_miR_330_3p + hsa_miR_331_3p + hsa_miR_335 + hsa_miR_335b + hsa_miR_337_3p + hsa_miR_338_3p + hsa_miR_338_5p + hsa_miR_339_3p + hsa_miR_339_5p + hsa_miR_33bb + hsa_miR_340 + hsa_miR_340b + hsa_miR_342_3p + hsa_miR_342_5p + hsa_miR_345 + hsa_miR_34a + hsa_miR_3605_3p + hsa_miR_3613_3p + hsa_miR_361_3p + hsa_miR_3614_5p + hsa_miR_361_5p + hsa_miR_362_3p + hsa_miR_362_5p + hsa_miR_363 + hsa_miR_363b + hsa_miR_365 + hsa_miR_3651 + hsa_miR_3652 + hsa_miR_3653 + hsa_miR_3656 + hsa_miR_3665 + hsa_miR_3667_5p + hsa_miR_3676 + hsa_miR_3679_3p + hsa_miR_3679_5p + hsa_miR_3688 + hsa_miR_374a + hsa_miR_374b + hsa_miR_374c + hsa_miR_376a + hsa_miR_376ab + hsa_miR_376c + hsa_miR_377 + hsa_miR_378 + hsa_miR_378b + hsa_miR_3907 + hsa_miR_3940 + hsa_miR_409_3p + hsa_miR_410 + hsa_miR_421 + hsa_miR_423_3p + hsa_miR_423_5p + hsa_miR_424 + hsa_miR_425 + hsa_miR_425b + hsa_miR_4257 + hsa_miR_4261 + hsa_miR_4270 + hsa_miR_4271 + hsa_miR_4281 + hsa_miR_4284 + hsa_miR_4286 + hsa_miR_4291 + hsa_miR_4298 + hsa_miR_4299 + hsa_miR_4306 + hsa_miR_4310 + hsa_miR_4312 + hsa_miR_4313 + hsa_miR_4317 + hsa_miR_4318 + hsa_miR_4323 + hsa_miR_4324 + hsa_miR_4326 + hsa_miR_450a + hsa_miR_451 + hsa_miR_454 + hsa_miR_454b + hsa_miR_484 + hsa_miR_485_3p + hsa_miR_486_3p + hsa_miR_486_5p + hsa_miR_487b + hsa_miR_491_5p + hsa_miR_494 + hsa_miR_495 + hsa_miR_497 + hsa_miR_498 + hsa_miR_500a + hsa_miR_500ab + hsa_miR_500b + hsa_miR_501_3p + hsa_miR_501_5p + hsa_miR_502_3p + hsa_miR_502_5p + hsa_miR_503 + hsa_miR_505 + hsa_miR_505b + hsa_miR_532_3p + hsa_miR_532_5p + hsa_miR_542_3p + hsa_miR_542_5p + hsa_miR_543 + hsa_miR_545 + hsa_miR_548aa + hsa_miR_548c_5p + hsa_miR_548d_5p + hsa_miR_548e + hsa_miR_548q + hsa_miR_550a + hsa_miR_550ab + hsa_miR_563 + hsa_miR_570 + hsa_miR_572 + hsa_miR_574_3p + hsa_miR_574_5p + hsa_miR_575 + hsa_miR_576_5p + hsa_miR_579 + hsa_miR_582_3p + hsa_miR_582_5p + hsa_miR_584 + hsa_miR_589b + hsa_miR_590_5p + hsa_miR_598 + hsa_miR_602 + hsa_miR_610 + hsa_miR_624b + hsa_miR_625 + hsa_miR_625b + hsa_miR_627 + hsa_miR_628_3p + hsa_miR_628_5p + hsa_miR_629 + hsa_miR_629b + hsa_miR_636 + hsa_miR_638 + hsa_miR_641 + hsa_miR_642b + hsa_miR_652 + hsa_miR_654_3p + hsa_miR_660 + hsa_miR_664 + hsa_miR_664b + hsa_miR_665 + hsa_miR_671_5p + hsa_miR_7 + hsa_miR_7_1b + hsa_miR_720 + hsa_miR_744 + hsa_miR_744b + hsa_miR_762 + hsa_miR_766 + hsa_miR_769_5p + hsa_miR_874 + hsa_miR_892b + hsa_miR_92a + hsa_miR_92b + hsa_miR_93 + hsa_miR_93b + hsa_miR_933 + hsa_miR_939 + hsa_miR_940 + hsa_miR_942 + hsa_miR_96 + hsa_miR_98 + hsa_miR_99a + hsa_miR_99b + hsv1_miR_H15 + hsv1_miR_H18 + hsv1_miR_H6_3p + hsv1_miR_H6_5p + hsv1_miR_H7b + hsv2_miR_H10 + hsv2_miR_H22 + hsv2_miR_H24 + hsv2_miR_H25 + hsv2_miR_H6 + hsv2_miR_H7_3p + kshv_miR_K12_10b + kshv_miR_K12_3 + Homoarginin + hsTroponinI + Cholesterin + HDLCholesterin + LDLCholesterin + Triglyceride + Glucose + HbA1c + sFLT_1 + SDF_1a + CTPROET1 + MRPROADM + MRPROANP + Insulin + CRP + Pro_BNP + Osteoprotegerin + MMP_9 + Ala + Arg + Asn + Asp + Cit + Gln + Glu + Gly + His + Ile + Leu + Met + Orn + Phe + Pro + Ser + Thr + Trp + Tyr + Val + ADMA + total_DMA + alpha_AAA + Kynurenine + Met_SO + C0 + C10 + C10_1 + C10_2 + C12 + C12_DC + C12_1 + C14 + C14_1 + C14_1_OH + C14_2 + C14_2_OH + C16 + C16_OH + C16_1 + C16_1_OH + C16_2 + C16_2_OH + C18 + C18_1 + C18_1_OH + C18_2 + C2 + C3 + C3_DC_C4_OH + C3_OH + C3_1 + C4 + C4_1 + C5 + C5_DC_C6_OH + C5_M_DC + C5_OH_C3_DC_M + C5_1 + C5_1_DC + C6_C4_1_DC + C6_1 + C7_DC + C8 + C9 + PC_aa_C24_0 + PC_aa_C26_0 + PC_aa_C28_1 + PC_aa_C30_0 + PC_aa_C32_0 + PC_aa_C32_1 + PC_aa_C32_2 + PC_aa_C32_3 + PC_aa_C34_1 + PC_aa_C34_2 + PC_aa_C34_3 + PC_aa_C34_4 + PC_aa_C36_0 + PC_aa_C36_1 + PC_aa_C36_2 + PC_aa_C36_3 + PC_aa_C36_4 + PC_aa_C36_5 + PC_aa_C36_6 + PC_aa_C38_0 + PC_aa_C38_1 + PC_aa_C38_3 + PC_aa_C38_4 + PC_aa_C38_5 + PC_aa_C38_6 + PC_aa_C40_1 + PC_aa_C40_2 + PC_aa_C40_3 + PC_aa_C40_4 + PC_aa_C40_5 + PC_aa_C40_6 + PC_aa_C42_0 + PC_aa_C42_1 + PC_aa_C42_2 + PC_aa_C42_4 + PC_aa_C42_5 + PC_aa_C42_6 + PC_ae_C30_0 + PC_ae_C30_2 + PC_ae_C32_1 + PC_ae_C32_2 + PC_ae_C34_0 + PC_ae_C34_1 + PC_ae_C34_2 + PC_ae_C34_3 + PC_ae_C36_0 + PC_ae_C36_1 + PC_ae_C36_2 + PC_ae_C36_3 + PC_ae_C36_4 + PC_ae_C36_5 + PC_ae_C38_0 + PC_ae_C38_1 + PC_ae_C38_2 + PC_ae_C38_3 + PC_ae_C38_4 + PC_ae_C38_5 + PC_ae_C38_6 + PC_ae_C40_1 + PC_ae_C40_2 + PC_ae_C40_3 + PC_ae_C40_4 + PC_ae_C40_5 + PC_ae_C40_6 + PC_ae_C42_0 + PC_ae_C42_1 + PC_ae_C42_2 + PC_ae_C42_3 + PC_ae_C42_4 + PC_ae_C42_5 + PC_ae_C44_3 + PC_ae_C44_4 + PC_ae_C44_5 + PC_ae_C44_6 + lysoPC_a_C14_0 + lysoPC_a_C16_0 + lysoPC_a_C16_1 + lysoPC_a_C17_0 + lysoPC_a_C18_0 + lysoPC_a_C18_1 + lysoPC_a_C18_2 + lysoPC_a_C20_3 + lysoPC_a_C20_4 + lysoPC_a_C24_0 + lysoPC_a_C26_0 + lysoPC_a_C26_1 + lysoPC_a_C28_0 + lysoPC_a_C28_1 + SM_OH_C14_1 + SM_OH_C16_1 + SM_OH_C22_1 + SM_OH_C22_2 + SM_OH_C24_1 + SM_C16_0 + SM_C16_1 + SM_C18_0 + SM_C18_1 + SM_C20_2 + SM_C24_0 + SM_C24_1 + SM_C26_0 + SM_C26_1 + Hexose + Sex + Age + DMT2_known + Smoking_known,data=joint_molecules_logMeanCenter_work,localImp=TRUE,ntree = 1000,mtry=6)
+forest<-randomForest(Ischemia ~ Sex + Age + DMT2_known + Smoking_known + hsa_miR_10a + hsa_miR_1274b + hsa_miR_146b_5p + hsa_miR_183 + hsa_miR_1914b + hsa_miR_212 + hsa_miR_335 + hsa_miR_500b + hsa_miR_502_5p + hsa_miR_660 + Homoarginin + hsTroponinI + Cholesterin + HDLCholesterin + LDLCholesterin + Triglyceride + Glucose + HbA1c + sFLT_1 + SDF_1a + CTPROET1 + MRPROADM + MRPROANP + Insulin + CRP + Pro_BNP + Osteoprotegerin + MMP_9 + C12_1 + C18_2 + Hexose + lysoPC_a_C17_0 + lysoPC_a_C18_2 + lysoPC_a_C24_0 + lysoPC_a_C28_1 + PC_aa_C28_1 + PC_aa_C32_3 + PC_aa_C34_3 + PC_aa_C36_0 + PC_aa_C38_0 + PC_aa_C38_4 + PC_aa_C40_3 + PC_aa_C42_0 + PC_aa_C42_2 + PC_ae_C30_0 + PC_ae_C30_2 + PC_ae_C32_1 + PC_ae_C32_2 + PC_ae_C34_0 + PC_ae_C34_2 + PC_ae_C34_3 + PC_ae_C36_0 + PC_ae_C36_1 + PC_ae_C36_2 + PC_ae_C36_3 + PC_ae_C36_5 + PC_ae_C38_0 + PC_ae_C38_2 + PC_ae_C38_6 + PC_ae_C40_2 + PC_ae_C40_5 + PC_ae_C40_6 + PC_ae_C42_2 + PC_ae_C42_3 + Phe + SM_C16_0 + SM_C16_1 + SM_C24_0 + SM_C24_1 + SM_C26_0 + SM_C26_1 + SM_OH_C14_1 + SM_OH_C16_1 + SM_OH_C22_1 + SM_OH_C22_2 + SM_OH_C24_1,data=joint_molecules_logMeanCenter_work,localImp=TRUE,ntree = 1000,mtry=6)
+
+
+
+# Create all plots
+explain_forest(forest, interactions = TRUE, data = joint_molecules_logMeanCenter_work, no_of_pred_plots = 100)
+
+
+# Distribution of minimal depth
+min_depth_frame <- min_depth_distribution(forest)
+
+print(paste(outputfolder,paste("min_depth_frame.png",sep=""),sep="/"))
+Cairo(width = 10.0, height = 21.0, units = 'in', res = 600, file=paste(outputfolder,paste("min_depth_frame.png",sep=""),sep="/"), type="png", bg="white")					
+	# plot_min_depth_distribution(forest) # gives the same result as below but takes longer
+	plot_min_depth_distribution(min_depth_frame, mean_sample = "relevant_trees", k = 60)
+dev.off()
+
+#########################################################################################################################################
+# Execute randomForest varImportance
+importance_frame <- measure_importance(forest)
+
+print(paste(outputfolder,paste("plot_multi_way_importance.png",sep=""),sep="/"))
+Cairo(width = 7.0, height = 7.0, units = 'in', res = 600, file=paste(outputfolder,paste("plot_multi_way_importance.png",sep=""),sep="/"), type="png", bg="white")					
+	# plot_multi_way_importance(forest, size_measure = "no_of_nodes") # gives the same result as below but takes longer
+	plot_multi_way_importance(importance_frame, size_measure = "no_of_nodes")
+dev.off()	
+
+print(paste(outputfolder,paste("plot_multi_way_importance2.png",sep=""),sep="/"))
+Cairo(width = 12.0, height = 12.0, units = 'in', res = 600, file=paste(outputfolder,paste("plot_multi_way_importance2.png",sep=""),sep="/"), type="png", bg="white")					
+	# plot_importance_ggpairs(forest) # gives the same result as below but takes longer
+	plot_importance_ggpairs(importance_frame)
+dev.off()	
+
+interactions_frame <- min_depth_interactions(forest, vars, mean_sample = "relevant_trees", uncond_mean_sample = "relevant_trees")
+# save(interactions_frame, file = "interactions_frame_relevant.rda")
+
+
+
+#########################################################################################################################################
+# Variable interactions
+# (vars <- important_variables(forest, k = 5, measures = c("mean_min_depth", "no_of_trees"))) # gives the same result as below but takes longer
+(vars <- important_variables(importance_frame, k = 60, measures = c("mean_min_depth", "no_of_trees")))
+
+interactions_frame <- min_depth_interactions(forest, vars)
+# save(interactions_frame, file = "interactions_frame.rda")
+
+print(paste(outputfolder,paste("min_depth_frame.png",sep=""),sep="/"))
+Cairo(width = 25.0, height = 10.0, units = 'in', res = 600, file=paste(outputfolder,paste("min_depth_frame.png",sep=""),sep="/"), type="png", bg="white")					
+	# plot_min_depth_interactions(forest) # calculates the interactions_frame for default settings so may give different results than the function below depending on our settings and takes more time
+	plot_min_depth_interactions(interactions_frame)
+dev.off()
+
+#########################################################################################################################################
+# Function to find peak of density plot
+#########################################################################################################################################
+
+#########################################################################################################################################
+library(xlsx)
+library("ggplot2")
+library(mclust)
+library("ggpub")
+ibrary(Hmisc)
+library(ggpubr)
+library("dplyr")
+library("ProbYX")
+
+# Take the variables to be compared
+compared_pairs<-read.xlsx(file="C:/Users/fv2/Documents/Selected_Interactions.xlsx", sheetName="76LR_selected_variables")
+
+# Add accuracy column
+compared_pairs$Accuracy<-0
+compared_pairs$Accuracy2<-0
+
+# For each of the compared pairs 
+for (interaction in compared_pairs$interaction)
+{
+	print(interaction)
+
+	# Sake name of biomolecules
+	biomolecule1<-unlist(strsplit(interaction, ":", fixed = TRUE))[1]
+	biomolecule2<-unlist(strsplit(interaction, ":", fixed = TRUE))[2]
+
+	# Copy table
+	joint_molecules_logMeanCenter_sub<-joint_molecules_logMeanCenter_work[,c(biomolecule1,biomolecule2,"Ischemia","Sex")]
+	
+	# Set colnames
+	colnames(joint_molecules_logMeanCenter_sub)<-c("x","y","Ischemia","Sex")	
+	
+	# Calculate average
+	mu_1 <- joint_molecules_logMeanCenter_sub %>%
+	group_by(Ischemia) %>%
+	summarise(grp.mean = mean(x))
+	
+	# Calculate average
+	mu_2 <- joint_molecules_logMeanCenter_sub %>%
+	group_by(Ischemia) %>%
+	summarise(grp.mean = mean(y))	
+	
+	
+	# Create density plot
+	density_plot <- ggplot(joint_molecules_logMeanCenter_sub, aes(x=x, y=y,Group=Ischemia,color=Ischemia))+ geom_point(size = 3)+theme_bw()+xlab(paste(biomolecule1))+ylab(paste(biomolecule2))+ scale_color_manual(values=c("black","#E69F00"))+theme(legend.position = "none")
+	
+	#density_plot <- ggplot(joint_molecules_logMeanCenter_sub, aes(x=x, y=y,z=Density))+ geom_point(size = 0.3)+theme_bw()+ggtitle(paste("Density plots Ischemic patints with different values of ",paste(biomolecule1,biomolecule2,sep=" and "),sep=""))+xlab(paste(biomolecule1))+ylab(paste(biomolecule2))
+	plot4<-density_plot + geom_vline(aes(xintercept = grp.mean, color = Ischemia), data = mu_1, linetype = 2)	+ geom_hline(aes(yintercept = grp.mean, color = Ischemia), data = mu_2, linetype = 2)
+	
+ 
+	# Create plot
+	#density_plot<-density_plot + stat_density_2d(geom = "raster", aes(fill = stat(density)), contour = FALSE)+facet_grid(. ~ Ischemia)+ scale_fill_viridis_c()
+	#density_plot<-density_plot + stat_density_2d(geom = "raster", aes(fill = stat(density)), contour = FALSE)+xlim(c(min(joint_molecules_logMeanCenter_work[,c(biomolecule2)]),max(joint_molecules_logMeanCenter_work[,c(biomolecule2)])))+	ylim(c(min(joint_molecules_logMeanCenter_work[,c(biomolecule1)]),max(joint_molecules_logMeanCenter_work[,c(biomolecule1)])))
+	#density_plot<-density_plot + stat_density_2d(geom = "raster", aes(fill = stat(density)), contour = FALSE)+facet_grid(. ~ Ischemia)+ scale_fill_viridis_c()
+	#density_plot1<-density_plot + stat_density_2d(geom = "polygon",aes(alpha = ..level.., fill = Ischemia), bins = 2) +facet_grid(. ~ Ischemia) + scale_fill_manual(values = c("black","#E69F00"))
+	#density_plot2<-density_plot + stat_density_2d(geom = "polygon",aes(alpha = ..level.., fill = Ischemia), bins = 2) + scale_fill_manual(values = c("black","#E69F00"))	
+	#density_plot1<-density_plot1+ theme( plot.title = element_blank())+ theme(legend.position = "none")+ scale_alpha(guide = 'none')
+	#density_plot2<-density_plot2+ theme( plot.title = element_blank())+ theme(legend.position = "none")+ scale_alpha(guide = 'none')
+
+	# Take the file name
+	file_name = paste("C:/Users/fv2/Documents/76LR_",biomolecule1,"_",biomolecule2,".png",sep="")
+
+	# Save plot
+	#png(width = 10.0, height = 5.0, units = 'in', res = 600, file=file_name)			
+	#	figure<-ggarrange(density_plot1, density_plot2,  common.legend = TRUE,legend="bottom")
+	#	figure<-annotate_figure(figure, top = text_grob(paste("Density plots for different values of ",paste(biomolecule1,biomolecule2,sep=" and "),sep=""),face = "bold", size = 12))				
+	#	print(figure)
+	#dev.off()
+	# Create numm plot
+	null_plot <- ggplot()+theme_bw() + theme( plot.background = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.border = element_blank() )	
+		
+
+	# Subset ischemic and controm
+	joint_molecules_logMeanCenter_sub_ischemic<-joint_molecules_logMeanCenter_sub[which(joint_molecules_logMeanCenter_sub$Ischemia=="Yes"),]
+	joint_molecules_logMeanCenter_sub_control<-joint_molecules_logMeanCenter_sub[which(joint_molecules_logMeanCenter_sub$Ischemia=="No"),]
+	
+	# ischemic X
+	ischemic_x<-dnorm(joint_molecules_logMeanCenter_sub$x, mean=mean(joint_molecules_logMeanCenter_sub_ischemic$x), sd=sd(joint_molecules_logMeanCenter_sub_ischemic$x))
+	
+	# control X
+	control_x<-dnorm(joint_molecules_logMeanCenter_sub$x, mean=mean(joint_molecules_logMeanCenter_sub_control$x), sd=sd(joint_molecules_logMeanCenter_sub_control$x))
+	
+	# ischemic X
+	ischemic_y<-dnorm(joint_molecules_logMeanCenter_sub$y, mean=mean(joint_molecules_logMeanCenter_sub_ischemic$y), sd=sd(joint_molecules_logMeanCenter_sub_ischemic$y))
+	
+	# control X
+	control_y<-dnorm(joint_molecules_logMeanCenter_sub$y, mean=mean(joint_molecules_logMeanCenter_sub_control$y), sd=sd(joint_molecules_logMeanCenter_sub_control$y))	
+	
+			
+	# Take the probability
+	joint_molecules_logMeanCenter_sub$Probability<-c(((ischemic_x-control_x)+(ischemic_y-control_y))/2)
+	
+	# Take the probability
+	joint_molecules_logMeanCenter_sub$ProbRatio<-(ischemic_x/control_x)+(ischemic_y+control_y)/2
+	
+	# set index
+	joint_molecules_logMeanCenter_sub$Index<-1:length(joint_molecules_logMeanCenter_sub$x)
+		
+	# Create density plot
+	axis_plot_Probability <- ggplot(joint_molecules_logMeanCenter_sub, aes(x=Index, y=Probability,Group=Ischemia,color=Ischemia))+ geom_point(size = 3)+theme_bw()+ylab("Densities [(Case.x - Contr.x)+ (Case.y - Contr.y))/2]")+xlab("index")+ scale_color_manual(values=c("black","#E69F00"))+theme(legend.position = "none")	+ theme(axis.text.x = element_blank(),axis.ticks = element_blank())+ geom_hline(yintercept = 0.0 , color = "#E69F00",linetype = 2)#+ylim(0,2)	
+	axis_plot_ratio <- ggplot(joint_molecules_logMeanCenter_sub, aes(x=Index, y=ProbRatio,Group=Ischemia,color=Ischemia))+ geom_point(size = 3)+theme_bw()+ylab("Density [(Case.x/Contr.x)+ (Case.y/Contr.y))/2]")+xlab("index")+ scale_color_manual(values=c("black","#E69F00"))+theme(legend.position = "none")	+ theme(axis.text.x = element_blank(),axis.ticks = element_blank())+ geom_hline(yintercept = 1.0 , color = "#E69F00",linetype = 2)#+ylim(0,2)	
+	
+	
+	# Add lines
+	#axis_plot_Probability<-axis_plot_Probability#
+		 
+		 
+	# Add sex line	 
+	#axis_plot_Probability<-axis_plot_Probability+ geom_vline(xintercept = sum(joint_molecules_logMeanCenter_sub$Sex=="F") , color = "grey",linetype = 2)+ 	
+	#geom_vline(xintercept = sum(joint_molecules_logMeanCenter_sub$Sex=="F") , color = "blue",linetype = 2)+ geom_text(x=sum(joint_molecules_logMeanCenter_sub$Sex=="F")-5, y=min(joint_molecules_logMeanCenter_sub$Probability), label="F",color="#CC79A7")+
+	#geom_vline(xintercept = sum(joint_molecules_logMeanCenter_sub$Sex=="F") , color = "blue",linetype = 2)+ geom_text(x=sum(joint_molecules_logMeanCenter_sub$Sex=="F")+5, y=min(joint_molecules_logMeanCenter_sub$Probability), label="M",color="#0072B2")
+	
+	# Create density plot
+	axis_plot_Probability_bp <- ggplot(joint_molecules_logMeanCenter_sub, aes(x=Index, y=Probability,Group=Ischemia,color=Ischemia))+ geom_boxplot()+theme_bw()+ylab("Densities [(Case.x - Contr.x)+ (Case.y - Contr.y))/2]")+xlab("index")+ scale_color_manual(values=c("black","#E69F00"))+theme(legend.position = "none")	+ theme(axis.text.x = element_blank(),axis.ticks = element_blank())+ geom_hline(yintercept = 0.0 , color = "#E69F00",linetype = 2)#+ylim(0,2)	
+	axis_plot_ratio_bp <- ggplot(joint_molecules_logMeanCenter_sub, aes(x=Index, y=ProbRatio,Group=Ischemia,color=Ischemia))+ geom_boxplot()+theme_bw()+ylab("Density [(Case.x/Contr.x)+ (Case.y/Contr.y))/2]")+xlab("index")+ scale_color_manual(values=c("black","#E69F00"))+theme(legend.position = "none")	+ theme(axis.text.x = element_blank(),axis.ticks = element_blank())+ geom_hline(yintercept = 1.0 , color = "#E69F00",linetype = 2)#+ylim(0,2)		
+	
+	# Take the predictions
+	TrueLabels=factor(as.vector(joint_molecules_logMeanCenter_sub$Ischemia),levels=c("Yes","No"))
+	Predicted=factor(as.vector(gsub("TRUE","Yes",gsub("FALSE","No",joint_molecules_logMeanCenter_sub$ProbRatio>=1.0))),levels=c("Yes","No"))
+	
+	# Save confusion matrix results
+	cm_results<-confusionMatrix(TrueLabels,Predicted)
+	
+	# Add accuracy
+	compared_pairs[which(compared_pairs$interaction==interaction),"Accuracy"]<-as.vector(cm_results$byClass[11])
+	
+	# Get table
+	confusion_matrix <- as.data.frame(cm_results$table)
+	
+	# Rename column
+	colnames(confusion_matrix)<-c("predicted_class","actual_class","Freq")
+	
+	# confusion_matrix
+	confusion_matrix$Group=paste(confusion_matrix$predicted_class,confusion_matrix$actual_class,sep="-")
+	
+	# Create plot
+	cm_plot2<-ggplot(data = confusion_matrix, mapping = aes(x = predicted_class, y = actual_class,fill=Group)) +	geom_tile(aes(fill = Group)) +	geom_text(aes(label = sprintf("%1.0f", Freq)), vjust = 1,color="white") + scale_fill_manual(values=c("black","#4D3500", "#996A00", "#E69F00")) + xlab("Predicted")+ ylab("Ischemia diagnosis")+ theme(legend.position = "none")
+	
+	# Create table
+	df_results<-data.frame(Metric=names(cm_results$byClass[c(1:2,5,11)]),Value=cm_results$byClass[c(1:2,5,11)])
+	
+	# Create sensitivuty plot
+	sensitivity_plot2<-ggplot(df_results, aes(Metric, Value)) +	geom_col() +  coord_flip()+ylim(0,1) + geom_text(aes(label = round(Value,2)), vjust = -0.5,hjust = -0.5)		
+	
+	# Take the predictions
+	TrueLabels=factor(as.vector(joint_molecules_logMeanCenter_sub$Ischemia),levels=c("Yes","No"))
+	Predicted=factor(as.vector(gsub("TRUE","Yes",gsub("FALSE","No",joint_molecules_logMeanCenter_sub$Probability>=0.0))),levels=c("Yes","No"))
+	
+	# Save confusion matrix results
+	cm_results<-confusionMatrix(TrueLabels,Predicted)
+	
+	# Add accuracy
+	compared_pairs[which(compared_pairs$interaction==interaction),"Accuracy2"]<-as.vector(cm_results$byClass[11])
+	
+	# Get table
+	confusion_matrix <- as.data.frame(cm_results$table)
+	
+	# Rename column
+	colnames(confusion_matrix)<-c("predicted_class","actual_class","Freq")
+	
+	# confusion_matrix
+	confusion_matrix$Group=paste(confusion_matrix$predicted_class,confusion_matrix$actual_class,sep="-")
+	
+	# Create plot
+	cm_plot<-ggplot(data = confusion_matrix, mapping = aes(x = predicted_class, y = actual_class,fill=Group)) +	geom_tile(aes(fill = Group)) +	geom_text(aes(label = sprintf("%1.0f", Freq)), vjust = 1,color="white") + scale_fill_manual(values=c("black","#4D3500", "#996A00", "#E69F00")) + xlab("Predicted")+ ylab("Ischemia diagnosis")+ theme(legend.position = "none")	
+	
+	# Create table
+	df_results<-data.frame(Metric=names(cm_results$byClass[c(1:2,5,11)]),Value=cm_results$byClass[c(1:2,5,11)])
+	
+	# Create sensitivuty plot
+	sensitivity_plot<-ggplot(df_results, aes(Metric, Value)) +	geom_col() +  coord_flip()+ylim(0,1) + geom_text(aes(label = round(Value,2)), vjust = -0.5,hjust = -0.5)			
+	
+	# Save plot
+	png(width = 20.0, height = 15.0, units = 'in', res = 600, file=file_name)				
+		# Grouped Scatter plot with marginal density plots
+		plot1<-ggscatterhist(joint_molecules_logMeanCenter_sub, x = "x", y = "y",margin.plot = "histogram",  color = "Ischemia", size = 3, alpha = 0.6,  palette = c("black","#E69F00"),  margin.params = list(fill = "Ischemia", color = "black", size = 0.2), xlab = biomolecule1, ylab = biomolecule2,legend = "bottom") + theme( plot.title = element_blank())
+		plot2<-ggscatterhist(joint_molecules_logMeanCenter_sub, x = "x", y = "y",margin.plot = "density",  color = "Ischemia", size = 3, alpha = 0.6,  palette = c("black","#E69F00"),  margin.params = list(fill = "Ischemia", color = "black", size = 0.2),xlab = biomolecule1, ylab = biomolecule2,legend = "bottom") + theme( plot.title = element_blank())		
+		plot3<-ggscatterhist(joint_molecules_logMeanCenter_sub, x = "x", y = "y",margin.plot = "boxplot",  color = "Ischemia", size = 3, alpha = 0.6,  palette = c("black","#E69F00"),  margin.params = list(fill = "Ischemia", color = "black", size = 0.2),xlab = biomolecule1, ylab = biomolecule2,legend = "bottom") + theme( plot.title = element_blank())				
+		figure<-ggarrange(plot1, plot2,plot3,plot4,axis_plot_Probability,axis_plot_Probability_bp,cm_plot,sensitivity_plot, axis_plot_ratio,axis_plot_ratio_bp,cm_plot2,sensitivity_plot2,common.legend = TRUE,legend="none",labels = c("A", "B","C","D","E","F","G","H","I","J","K","L"),ncol = 4, nrow = 3)
+		figure<-annotate_figure(figure, top = text_grob(paste("Analysis for the interaction pair of biomolecules: ",paste(biomolecule1,biomolecule2,sep=" and "),sep=""),face = "bold", size = 12))
+		print( figure)		
+	dev.off()	
+
+}
+#########################################################################################################################################
+library("stringr")
+#' str_remove_all(fruits, "[aeiou]")
+str_remove <- function(string, pattern) {
+  str_replace(string, pattern, "")
+}
+#########################################################################################################################################
+# Take the variables to be compared
+compared_pairs<-read.xlsx(file="C:/Users/fv2/Documents/Selected_Interactions.xlsx", sheetName="76LR_selected_variables")
+
+# Execute randomForest
+formula_complete<-paste("Ischemia ~ Sex + Age + DMT2_known + Smoking_known + hsa_miR_10a + hsa_miR_1274b + hsa_miR_146b_5p + hsa_miR_183 + hsa_miR_1914b + hsa_miR_212 + hsa_miR_335 + hsa_miR_500b + hsa_miR_502_5p + hsa_miR_660 + Homoarginin + hsTroponinI + Cholesterin + HDLCholesterin + LDLCholesterin + Triglyceride + Glucose + HbA1c + sFLT_1 + SDF_1a + CTPROET1 + MRPROADM + MRPROANP + Insulin + CRP + Pro_BNP + Osteoprotegerin + MMP_9 + C12_1 + C18_2 + Hexose + lysoPC_a_C17_0 + lysoPC_a_C18_2 + lysoPC_a_C24_0 + lysoPC_a_C28_1 + PC_aa_C28_1 + PC_aa_C32_3 + PC_aa_C34_3 + PC_aa_C36_0 + PC_aa_C38_0 + PC_aa_C38_4 + PC_aa_C40_3 + PC_aa_C42_0 + PC_aa_C42_2 + PC_ae_C30_0 + PC_ae_C30_2 + PC_ae_C32_1 + PC_ae_C32_2 + PC_ae_C34_0 + PC_ae_C34_2 + PC_ae_C34_3 + PC_ae_C36_0 + PC_ae_C36_1 + PC_ae_C36_2 + PC_ae_C36_3 + PC_ae_C36_5 + PC_ae_C38_0 + PC_ae_C38_2 + PC_ae_C38_6 + PC_ae_C40_2 + PC_ae_C40_5 + PC_ae_C40_6 + PC_ae_C42_2 + PC_ae_C42_3 + Phe + SM_C16_0 + SM_C16_1 + SM_C24_0 + SM_C24_1 + SM_C26_0 + SM_C26_1 + SM_OH_C14_1 + SM_OH_C16_1 + SM_OH_C22_1 + SM_OH_C22_2 + SM_OH_C24_1")
+
+# Create randomForest
+forest_all<-randomForest(as.formula(formula_complete),data=joint_molecules_logMeanCenter_work,localImp=TRUE,ntree = 1000,mtry=6)
+
+# Create importance 
+importance_frame_all <- measure_importance(forest_all)	
+
+# Data.framea
+all_delta_results<-data.frame()
+
+# Take all the variables
+all_variables<-unique(unlist(strsplit(as.vector(compared_pairs$interaction),":", fixed = TRUE)))
+
+# Cerate list of all importances
+list_importances<-list()
+
+# For each variables
+for (variable_in_pair in all_variables)
+{
+	print(variable_in_pair)
+
+	# Remove first biomolecule
+	formula_complete_biom1<-str_remove(formula_complete, paste("\\+ ",variable_in_pair," ",sep=""))
+	
+	# Create randomForest
+	forest_biom1<-randomForest(as.formula(formula_complete_biom1),data=joint_molecules_logMeanCenter_work,localImp=TRUE,ntree = 1000,mtry=6)	
+	
+	# Create importance 
+	importance_frame_biom1 <- measure_importance(forest_biom1)
+
+	# Add results to list
+	list_importances[[variable_in_pair]]<-importance_frame_biom1
+
+}
+
+# For each of the compared pairs 
+for (interaction in compared_pairs$interaction)
+{
+	print(interaction)
+
+	# Sake name of biomolecules
+	biomolecule1<-unlist(strsplit(interaction, ":", fixed = TRUE))[1]
+	biomolecule2<-unlist(strsplit(interaction, ":", fixed = TRUE))[2]
+	
+	# Create importance 
+	importance_frame_biom1 <- list_importances[[biomolecule1]]
+	importance_frame_biom2 <- list_importances[[biomolecule2]]
+	
+	# Create variable importance data.frame
+	df_var_importance<-merge(merge(importance_frame_all[,c("variable","accuracy_decrease","gini_decrease")],importance_frame_biom1[,c("variable","accuracy_decrease","gini_decrease")],by="variable",all =TRUE),importance_frame_biom2[,c("variable","accuracy_decrease","gini_decrease")],by="variable",all =TRUE)
+	
+	# Re-scale
+	df_var_importance$accuracy_decrease.x<-as.vector(scale(df_var_importance$accuracy_decrease.x))
+	df_var_importance$accuracy_decrease.y<-as.vector(scale(df_var_importance$accuracy_decrease.y))
+	df_var_importance$accuracy_decrease<-as.vector(scale(df_var_importance$accuracy_decrease))	
+	df_var_importance$gini_decrease.x<-as.vector(scale(df_var_importance$gini_decrease.x))
+	df_var_importance$gini_decrease.y<-as.vector(scale(df_var_importance$gini_decrease.y))
+	df_var_importance$gini_decrease<-as.vector(scale(df_var_importance$gini_decrease))
+	
+	# Colnames
+	df_var_importance_all<-rbind(data.frame(Variable=df_var_importance$variable,accuracy_decrease=df_var_importance$accuracy_decrease.x,gini_decrease=df_var_importance$gini_decrease.x,comparisson="RF_complete"),	
+	data.frame(Variable=df_var_importance$variable,accuracy_decrease=df_var_importance$accuracy_decrease.y,gini_decrease=df_var_importance$gini_decrease.x,comparisson=paste("RF_",biomolecule1,"_removed",sep="")),
+	data.frame(Variable=df_var_importance$variable,accuracy_decrease=df_var_importance$accuracy_decrease,gini_decrease=df_var_importance$gini_decrease,comparisson=paste("RF_",biomolecule2,"_removed",sep="")))
+	
+	# Select label
+	df_var_importance_all$Label<-""
+	
+	# Create label
+	df_var_importance_all[which(df_var_importance_all$Variable %in% c(as.vector(biomolecule1),as.vector(biomolecule2))),"Label"]<-as.vector(df_var_importance_all[which(df_var_importance_all$Variable %in% c(as.vector(biomolecule1),as.vector(biomolecule2))),"Variable"])
+					
+	#ggplot(df_var_importance_all, aes(x=accuracy_decrease, y=gini_decrease,Group=Ischemia,color=Ischemia))+ geom_point(size = 3)+theme_bw()+ylab("Densities [(Case.x - Contr.x)+ (Case.y - Contr.y))/2]")+xlab("index")+ scale_color_manual(values=c("black","#E69F00"))+theme(legend.position = "none")	+ theme(axis.text.x = element_blank(),axis.ticks = element_blank())+ geom_hline(yintercept = 0.0 , color = "#E69F00",linetype = 2)#+ylim(0,2)	
+	plot1<-ggplot(df_var_importance_all, aes(x=accuracy_decrease, y=gini_decrease,label = Label))+ geom_point(size = 4)+theme_bw()+facet_grid(. ~ comparisson)+ geom_text(size=6)+xlab("scaled accuracy_decrease")+ylab("scaled gini_decrease")
+	
+	# Take the file name
+	file_name = paste("C:/Users/fv2/Documents/76LR_varImpo",biomolecule1,"_",biomolecule2,".png",sep="")	
+	
+	# Save plot
+	png(width = 15.0, height = 5.0, units = 'in', res = 600, file=file_name)				
+		# Grouped Scatter plot with marginal density plots
+		print(plot1)
+	dev.off()	
+	
+	# Set rownames
+	rownames(df_var_importance)<-df_var_importance$variable
+	
+	# Accuract Decrease
+	delta_decrease_accuracy_biom1<-df_var_importance[biomolecule1,"accuracy_decrease.x"]-df_var_importance[biomolecule1,"accuracy_decrease"]
+	delta_decrease_accuracy_biom2<-df_var_importance[biomolecule2,"accuracy_decrease.x"]-df_var_importance[biomolecule2,"accuracy_decrease.y"]
+	
+	# Gini Decrease
+	delta_decrease_gini_biom1<-df_var_importance[biomolecule1,"gini_decrease.x"]-df_var_importance[biomolecule1,"gini_decrease"]
+	delta_decrease_gini_biom2<-df_var_importance[biomolecule2,"gini_decrease.x"]-df_var_importance[biomolecule2,"gini_decrease.y"]
+	
+	# Store results
+	delta_pair<-data.frame(biomolecule1=biomolecule1,biomolecule2=biomolecule2,delta_decrease_accuracy_biom1=delta_decrease_accuracy_biom1,delta_decrease_gini_biom1=delta_decrease_gini_biom1,delta_decrease_accuracy_biom2=delta_decrease_accuracy_biom2,delta_decrease_gini_biom2)
+	
+	# Save results
+	all_delta_results<-rbind(all_delta_results,delta_pair)	
+}
+#########################################################################################################################################
+# Find the pair with the bissgest
+df_df_delta_all<-data.frame()
+
+# For each variables
+for (variable_in_pair in all_variables)
+{
+	print(variable_in_pair)
+	
+	# Add results to list
+	importance_frame_biom1<-list_importances[[variable_in_pair]]
+	
+	# Create variable importance data.frame
+	df_var_importance<-merge(importance_frame_all[,c("variable","accuracy_decrease","gini_decrease")],importance_frame_biom1[,c("variable","accuracy_decrease","gini_decrease")],by="variable",all =TRUE)
+		
+	# Create delta
+	df_var_importance$Delta_accuracy_decrease<-df_var_importance$accuracy_decrease.x-df_var_importance$accuracy_decrease.y
+		
+	# create pair
+	df_delta_pair<-data.frame(biomolecule1=variable_in_pair,biomolecule2=as.vector(df_var_importance[which.max(df_var_importance$Delta_accuracy_decrease),"variable"]),delta_decrease_accuracy=as.vector(df_var_importance[which.max(df_var_importance$Delta_accuracy_decrease),"Delta_accuracy_decrease"]))	
+	
+	# Bind tables
+	df_df_delta_all<-rbind(df_df_delta_all,df_delta_pair)
+	
+}	
+
+# For each of the compared pairs 
+for (interaction in rownames(df_df_delta_all))
+{
+	print(interaction)
+	
+	# Sake name of biomolecules
+	biomolecule1<-as.vector(df_df_delta_all[interaction,"biomolecule1"])
+	biomolecule2<-as.vector(df_df_delta_all[interaction,"biomolecule2"])
+	
+	# If it is not in the list
+	if(sum(names(list_importances) %in% biomolecule1)==0)
+	{
+	
+		# Remove first biomolecule
+		formula_complete_biom1<-str_remove(formula_complete, paste("\\+ ",biomolecule1," ",sep=""))
+		
+		# Create randomForest
+		forest_biom1<-randomForest(as.formula(formula_complete_biom1),data=joint_molecules_logMeanCenter_work,localImp=TRUE,ntree = 1000,mtry=6)	
+		
+		# Create importance 
+		importance_frame_biom1 <- measure_importance(forest_biom1)
+
+		# Add results to list
+		list_importances[[biomolecule1]]<-importance_frame_biom1	
+	
+	}
+	# If it is not in the list
+	if(sum(names(list_importances) %in% biomolecule2)==0)
+	{
+	
+		# Remove first biomolecule
+		formula_complete_biom1<-str_remove(formula_complete, paste("\\+ ",biomolecule2," ",sep=""))
+		
+		# Create randomForest
+		forest_biom1<-randomForest(as.formula(formula_complete_biom1),data=joint_molecules_logMeanCenter_work,localImp=TRUE,ntree = 1000,mtry=6)	
+		
+		# Create importance 
+		importance_frame_biom1 <- measure_importance(forest_biom1)
+
+		# Add results to list
+		list_importances[[biomolecule2]]<-importance_frame_biom1	
+	
+	}	
+	
+	# Create importance 
+	importance_frame_biom1 <- list_importances[[biomolecule1]]
+	importance_frame_biom2 <- list_importances[[biomolecule2]]
+	
+	# Create variable importance data.frame
+	df_var_importance<-merge(merge(importance_frame_all[,c("variable","accuracy_decrease","gini_decrease")],importance_frame_biom1[,c("variable","accuracy_decrease","gini_decrease")],by="variable",all =TRUE),importance_frame_biom2[,c("variable","accuracy_decrease","gini_decrease")],by="variable",all =TRUE)
+	
+	# Re-scale
+	df_var_importance$accuracy_decrease.x<-as.vector(scale(df_var_importance$accuracy_decrease.x))
+	df_var_importance$accuracy_decrease.y<-as.vector(scale(df_var_importance$accuracy_decrease.y))
+	df_var_importance$accuracy_decrease<-as.vector(scale(df_var_importance$accuracy_decrease))	
+	df_var_importance$gini_decrease.x<-as.vector(scale(df_var_importance$gini_decrease.x))
+	df_var_importance$gini_decrease.y<-as.vector(scale(df_var_importance$gini_decrease.y))
+	df_var_importance$gini_decrease<-as.vector(scale(df_var_importance$gini_decrease))
+	
+	# Colnames
+	df_var_importance_all<-rbind(data.frame(Variable=df_var_importance$variable,accuracy_decrease=df_var_importance$accuracy_decrease.x,gini_decrease=df_var_importance$gini_decrease.x,comparisson="RF_complete"),	
+	data.frame(Variable=df_var_importance$variable,accuracy_decrease=df_var_importance$accuracy_decrease.y,gini_decrease=df_var_importance$gini_decrease.x,comparisson=paste("RF_",biomolecule1,"_removed",sep="")),
+	data.frame(Variable=df_var_importance$variable,accuracy_decrease=df_var_importance$accuracy_decrease,gini_decrease=df_var_importance$gini_decrease,comparisson=paste("RF_",biomolecule2,"_removed",sep="")))
+	
+	# Select label
+	df_var_importance_all$Label<-""
+	
+	# Create label
+	df_var_importance_all[which(df_var_importance_all$Variable %in% c(as.vector(biomolecule1),as.vector(biomolecule2))),"Label"]<-as.vector(df_var_importance_all[which(df_var_importance_all$Variable %in% c(as.vector(biomolecule1),as.vector(biomolecule2))),"Variable"])
+					
+	#ggplot(df_var_importance_all, aes(x=accuracy_decrease, y=gini_decrease,Group=Ischemia,color=Ischemia))+ geom_point(size = 3)+theme_bw()+ylab("Densities [(Case.x - Contr.x)+ (Case.y - Contr.y))/2]")+xlab("index")+ scale_color_manual(values=c("black","#E69F00"))+theme(legend.position = "none")	+ theme(axis.text.x = element_blank(),axis.ticks = element_blank())+ geom_hline(yintercept = 0.0 , color = "#E69F00",linetype = 2)#+ylim(0,2)	
+	plot1<-ggplot(df_var_importance_all, aes(x=accuracy_decrease, y=gini_decrease,label = Label))+ geom_point(size = 4)+theme_bw()+facet_grid(. ~ comparisson)+ geom_text(size=6)+xlab("scaled accuracy_decrease")+ylab("scaled gini_decrease")
+	
+	# Take the file name
+	file_name = paste("C:/Users/fv2/Documents/76LR_varImpo",biomolecule1,"_",biomolecule2,".png",sep="")	
+	
+	# Save plot
+	png(width = 15.0, height = 5.0, units = 'in', res = 600, file=file_name)				
+		# Grouped Scatter plot with marginal density plots
+		print(plot1)
+	dev.off()	
+	
+
+
+}
+
+
+
+# 2nd - all moleucles exccept biomolecule 1
+# 3rd - all moleucles exccept biomolecule 3
+# plot Multi-way importance plot for the three cases
+#########################################################################################################################################
+set.seed(42)
+library("iml")
+library("randomForest")
+
+# load required packages
+library(rsample)   # data splitting
+library(ggplot2)   # allows extension of visualizations
+library(dplyr)     # basic data transformation
+library(h2o)       # machine learning modeling
+library(iml)       # ML interprtation
+
+# initialize h2o session
+h2o.no_progress()
+h2o.init()
+
+
+#########################################################################################################################################
+# Take the variables to be compared
+compared_pairs<-read.xlsx(file="C:/Users/fv2/Documents/Selected_Interactions.xlsx", sheetName="76LR_selected_variables")
+
+#########################################################################################################################################  
+# 1. create a data frame with just the features
+features <- joint_molecules_logMeanCenter_work[,c("Sex" , "Age" , "DMT2_known" , "Smoking_known" , "hsa_miR_10a" , "hsa_miR_1274b" , "hsa_miR_146b_5p" , "hsa_miR_183" , "hsa_miR_1914b" , "hsa_miR_212" , "hsa_miR_335" , "hsa_miR_500b" , "hsa_miR_502_5p" , "hsa_miR_660" , "Homoarginin" , "hsTroponinI" , "Cholesterin" , "HDLCholesterin" , "LDLCholesterin" , "Triglyceride" , "Glucose" , "HbA1c" , "sFLT_1" , "SDF_1a" , "CTPROET1" , "MRPROADM" , "MRPROANP" , "Insulin" , "CRP" , "Pro_BNP" , "Osteoprotegerin" , "MMP_9" , "C12_1" , "C18_2" , "Hexose" , "lysoPC_a_C17_0" , "lysoPC_a_C18_2" , "lysoPC_a_C24_0" , "lysoPC_a_C28_1" , "PC_aa_C28_1" , "PC_aa_C32_3" , "PC_aa_C34_3" , "PC_aa_C36_0" , "PC_aa_C38_0" , "PC_aa_C38_4" , "PC_aa_C40_3" , "PC_aa_C42_0" , "PC_aa_C42_2" , "PC_ae_C30_0" , "PC_ae_C30_2" , "PC_ae_C32_1" , "PC_ae_C32_2" , "PC_ae_C34_0" , "PC_ae_C34_2" , "PC_ae_C34_3" , "PC_ae_C36_0" , "PC_ae_C36_1" , "PC_ae_C36_2" , "PC_ae_C36_3" , "PC_ae_C36_5" , "PC_ae_C38_0" , "PC_ae_C38_2" , "PC_ae_C38_6" , "PC_ae_C40_2" , "PC_ae_C40_5" , "PC_ae_C40_6" , "PC_ae_C42_2" , "PC_ae_C42_3" , "Phe" , "SM_C16_0" , "SM_C16_1" , "SM_C24_0" , "SM_C24_1" , "SM_C26_0" , "SM_C26_1" , "SM_OH_C14_1" , "SM_OH_C16_1" , "SM_OH_C22_1" , "SM_OH_C22_2" , "SM_OH_C24_1")]
+
+# 2. Create a vector with the actual responses
+response <- joint_molecules_logMeanCenter_work$Ischemia
+
+# 3. Create custom predict function that returns the predicted values as a
+#    vector (probability of purchasing in our example)
+pred <- function(model, newdata)  {
+  results <- as.data.frame(predict(model, features,type="prob"))
+  return(results$Yes)
+}
+
+pred(random_forest, features) %>% head()
+#########################################################################################################################################  
+# Create models
+random_forest<-randomForest(Ischemia ~ Sex + Age + DMT2_known + Smoking_known + hsa_miR_10a + hsa_miR_1274b + hsa_miR_146b_5p + hsa_miR_183 + hsa_miR_1914b + hsa_miR_212 + hsa_miR_335 + hsa_miR_500b + hsa_miR_502_5p + hsa_miR_660 + Homoarginin + hsTroponinI + Cholesterin + HDLCholesterin + LDLCholesterin + Triglyceride + Glucose + HbA1c + sFLT_1 + SDF_1a + CTPROET1 + MRPROADM + MRPROANP + Insulin + CRP + Pro_BNP + Osteoprotegerin + MMP_9 + C12_1 + C18_2 + Hexose + lysoPC_a_C17_0 + lysoPC_a_C18_2 + lysoPC_a_C24_0 + lysoPC_a_C28_1 + PC_aa_C28_1 + PC_aa_C32_3 + PC_aa_C34_3 + PC_aa_C36_0 + PC_aa_C38_0 + PC_aa_C38_4 + PC_aa_C40_3 + PC_aa_C42_0 + PC_aa_C42_2 + PC_ae_C30_0 + PC_ae_C30_2 + PC_ae_C32_1 + PC_ae_C32_2 + PC_ae_C34_0 + PC_ae_C34_2 + PC_ae_C34_3 + PC_ae_C36_0 + PC_ae_C36_1 + PC_ae_C36_2 + PC_ae_C36_3 + PC_ae_C36_5 + PC_ae_C38_0 + PC_ae_C38_2 + PC_ae_C38_6 + PC_ae_C40_2 + PC_ae_C40_5 + PC_ae_C40_6 + PC_ae_C42_2 + PC_ae_C42_3 + Phe + SM_C16_0 + SM_C16_1 + SM_C24_0 + SM_C24_1 + SM_C26_0 + SM_C26_1 + SM_OH_C14_1 + SM_OH_C16_1 + SM_OH_C22_1 + SM_OH_C22_2 + SM_OH_C24_1,data=joint_molecules_logMeanCenter_work,localImp=TRUE,ntree = 1000,mtry=6)
+logistic_regression<-glm(formula=as.formula("Ischemia ~ Sex + Age + DMT2_known + Smoking_known + hsa_miR_10a + hsa_miR_1274b + hsa_miR_146b_5p + hsa_miR_183 + hsa_miR_1914b + hsa_miR_212 + hsa_miR_335 + hsa_miR_500b + hsa_miR_502_5p + hsa_miR_660 + Homoarginin + hsTroponinI + Cholesterin + HDLCholesterin + LDLCholesterin + Triglyceride + Glucose + HbA1c + sFLT_1 + SDF_1a + CTPROET1 + MRPROADM + MRPROANP + Insulin + CRP + Pro_BNP + Osteoprotegerin + MMP_9 + C12_1 + C18_2 + Hexose + lysoPC_a_C17_0 + lysoPC_a_C18_2 + lysoPC_a_C24_0 + lysoPC_a_C28_1 + PC_aa_C28_1 + PC_aa_C32_3 + PC_aa_C34_3 + PC_aa_C36_0 + PC_aa_C38_0 + PC_aa_C38_4 + PC_aa_C40_3 + PC_aa_C42_0 + PC_aa_C42_2 + PC_ae_C30_0 + PC_ae_C30_2 + PC_ae_C32_1 + PC_ae_C32_2 + PC_ae_C34_0 + PC_ae_C34_2 + PC_ae_C34_3 + PC_ae_C36_0 + PC_ae_C36_1 + PC_ae_C36_2 + PC_ae_C36_3 + PC_ae_C36_5 + PC_ae_C38_0 + PC_ae_C38_2 + PC_ae_C38_6 + PC_ae_C40_2 + PC_ae_C40_5 + PC_ae_C40_6 + PC_ae_C42_2 + PC_ae_C42_3 + Phe + SM_C16_0 + SM_C16_1 + SM_C24_0 + SM_C24_1 + SM_C26_0 + SM_C26_1 + SM_OH_C14_1 + SM_OH_C16_1 + SM_OH_C22_1 + SM_OH_C22_2 + SM_OH_C24_1"),family=binomial(link='logit'), data=joint_molecules_logMeanCenter_work, na.action=na.omit)												
+decision_tree<-tree(as.formula("Ischemia ~ Sex + Age + DMT2_known + Smoking_known + hsa_miR_10a + hsa_miR_1274b + hsa_miR_146b_5p + hsa_miR_183 + hsa_miR_1914b + hsa_miR_212 + hsa_miR_335 + hsa_miR_500b + hsa_miR_502_5p + hsa_miR_660 + Homoarginin + hsTroponinI + Cholesterin + HDLCholesterin + LDLCholesterin + Triglyceride + Glucose + HbA1c + sFLT_1 + SDF_1a + CTPROET1 + MRPROADM + MRPROANP + Insulin + CRP + Pro_BNP + Osteoprotegerin + MMP_9 + C12_1 + C18_2 + Hexose + lysoPC_a_C17_0 + lysoPC_a_C18_2 + lysoPC_a_C24_0 + lysoPC_a_C28_1 + PC_aa_C28_1 + PC_aa_C32_3 + PC_aa_C34_3 + PC_aa_C36_0 + PC_aa_C38_0 + PC_aa_C38_4 + PC_aa_C40_3 + PC_aa_C42_0 + PC_aa_C42_2 + PC_ae_C30_0 + PC_ae_C30_2 + PC_ae_C32_1 + PC_ae_C32_2 + PC_ae_C34_0 + PC_ae_C34_2 + PC_ae_C34_3 + PC_ae_C36_0 + PC_ae_C36_1 + PC_ae_C36_2 + PC_ae_C36_3 + PC_ae_C36_5 + PC_ae_C38_0 + PC_ae_C38_2 + PC_ae_C38_6 + PC_ae_C40_2 + PC_ae_C40_5 + PC_ae_C40_6 + PC_ae_C42_2 + PC_ae_C42_3 + Phe + SM_C16_0 + SM_C16_1 + SM_C24_0 + SM_C24_1 + SM_C26_0 + SM_C26_1 + SM_OH_C14_1 + SM_OH_C16_1 + SM_OH_C22_1 + SM_OH_C22_2 + SM_OH_C24_1"),data=joint_molecules_logMeanCenter_work)
+
+
+
+# Take var Imp from random forest
+varImp_rf<-data.frame(Overall=varImp(random_forest,scale=TRUE)[,1])
+rownames(varImp_rf)<-rownames(varImp(random_forest,scale=TRUE))
+#########################################################################################################################################   
+# Create data.frame
+df_imp.glm<-data.frame(Overall=varImp(logistic_regression,scale=TRUE),feature=rownames(varImp(logistic_regression,scale=TRUE)),Method="glm")
+df_imp.rf<-data.frame(Overall=varImp_rf,feature=rownames(varImp_rf),Method="rf")
+df_imp.tree<-data.frame(Overall=varImp(rpart(decision_tree),scale=TRUE),feature=rownames(varImp(rpart(decision_tree),scale=TRUE)),Method="Tree")
+
+
+df_imp.glm$feature<-factor(df_imp.glm$feature,levels=df_imp.rf[order(df_imp.rf$Overall),"feature"])
+df_imp.rf$feature<-factor(df_imp.rf$feature,levels=df_imp.rf[order(df_imp.rf$Overall),"feature"])
+df_imp.tree$feature<-factor(df_imp.tree$feature,levels=df_imp.rf[order(df_imp.rf$Overall),"feature"])
+
+imp.results<-rbind(df_imp.rf,df_imp.glm,df_imp.tree)
+
+# Create factor
+imp.results$feature<-factor(imp.results$feature,levels=df_imp.rf[order(df_imp.rf$Overall),"feature"])
+
+# Filter results
+imp.results<-imp.results[-which(is.na(imp.results$feature)),]
+
+# Change factor
+#imp.results$Method<-factor(imp.results$Method,level=(c("rf","glm","gbm")))
+
+# Take the file name
+file_name = paste("C:/Users/fv2/Documents/76LR_ilm_varImpo_general.png",sep="")	
+
+# Save plot
+png(width = 10.0, height = 10.0, units = 'in', res = 600, file=file_name)				
+	#ggplot(df_var_importance_all, aes(x=accuracy_decrease, y=gini_decrease,Group=Ischemia,color=Ischemia))+ geom_point(size = 3)+theme_bw()+ylab("Densities [(Case.x - Contr.x)+ (Case.y - Contr.y))/2]")+xlab("index")+ scale_color_manual(values=c("black","#E69F00"))+theme(legend.position = "none")	+ theme(axis.text.x = element_blank(),axis.ticks = element_blank())+ geom_hline(yintercept = 0.0 , color = "#E69F00",linetype = 2)#+ylim(0,2)	
+	print(ggplot(imp.results, aes(feature, Overall))+ geom_col(width=0.1,color="black")+ theme_bw()+facet_grid(. ~ Method)+  coord_flip() + ylab("Feature Importance"))
+dev.off()	
+####################################################################
+# Init predictor
+pred<-Predictor$new(random_forest, data = joint_molecules_logMeanCenter_work[,c(rownames(varImp(random_forest)),"Ischemia")],y="Ischemia",type="prob")
+
+# Calculate interactions
+interact = Interaction$new(pred)
+
+# Save results
+interact$results$.feature<-factor(interact$results$.feature,levels=unique(interact$results[order(interact$results$.interaction),".feature"]))
+
+# Replace dataset
+interact$results<-interact$results[which(interact$results$.class=="Yes"),]
+
+# Take the file name
+file_name = paste("C:/Users/fv2/Documents/76LR_ilm_varImpo_all_interact.png",sep="")	
+
+# Save plot
+png(width = 7.0, height = 10.0, units = 'in', res = 600, file=file_name)				
+	#ggplot(df_var_importance_all, aes(x=accuracy_decrease, y=gini_decrease,Group=Ischemia,color=Ischemia))+ geom_point(size = 3)+theme_bw()+ylab("Densities [(Case.x - Contr.x)+ (Case.y - Contr.y))/2]")+xlab("index")+ scale_color_manual(values=c("black","#E69F00"))+theme(legend.position = "none")	+ theme(axis.text.x = element_blank(),axis.ticks = element_blank())+ geom_hline(yintercept = 0.0 , color = "#E69F00",linetype = 2)#+ylim(0,2)	
+	print(plot(interact)+geom_vline(xintercept=0.05, linetype=2,size=1))
+dev.off()	
+#########################################################################################################################################   
+library("randomForestExplainer")
+library("stringr")
+library(rpart)
+library(rpart.plot)
+library("ggparty")
+
+#########################################################################################################################################   
+# Now with log values
+#########################################################################################################################################   
+library("randomForestExplainer")
+library("stringr")
+library(rpart)
+library(rpart.plot)
+library("ggparty")
+
+#joint_molecules_logMeanCenter_work<-readRDS(file = "C:/Users/fv2/Documents/joint_molecules_raw.rds")
+#########################################################################################################################################  
+# Fix the ratio
+ratio<-0.60
+
+# Take the number of ischemich
+joint_molecules_logMeanCenter_work_yes<-joint_molecules_logMeanCenter_work[which(joint_molecules_logMeanCenter_work$Ischemia=="Yes"),]
+joint_molecules_logMeanCenter_work_no<-joint_molecules_logMeanCenter_work[which(joint_molecules_logMeanCenter_work$Ischemia=="No"),]
+
+# Take the number of samples per group
+n_samlples<-floor(dim(joint_molecules_logMeanCenter_work_yes)[1]*ratio)
+
+# Select samples
+trainning_ischemic<-sample(x=rownames(joint_molecules_logMeanCenter_work_yes), size=n_samlples)
+trainning_control<-sample(x=rownames(joint_molecules_logMeanCenter_work_no), size=n_samlples)
+
+# Reframe control
+joint_molecules_logMeanCenter_work_no<-joint_molecules_logMeanCenter_work_no[!rownames(joint_molecules_logMeanCenter_work_yes) %in% trainning_ischemic,]
+
+rownames()
+trainning_control
+
+# Select samples
+testing_ischemic<-rownames(joint_molecules_logMeanCenter_work_yes)[!rownames(joint_molecules_logMeanCenter_work_yes) %in% trainning_ischemic]
+testing_control<-sample(x=rownames(joint_molecules_logMeanCenter_work_no), size=length(testing_ischemic))
+
+# Create splits
+splits<-list(train=joint_molecules_logMeanCenter_work[c(trainning_ischemic,trainning_control),],valid=joint_molecules_logMeanCenter_work[c(testing_ischemic,testing_control),])
+
+
+# Reduce dataset
+joint_molecules_logMeanCenter_work_red<-joint_molecules_logMeanCenter_work[c(testing_ischemic,testing_control,trainning_ischemic,trainning_control),]
+
+#########################################################################################################################################  
+# For each feature with strong interactions
+for (feature in as.vector(interact$results[which(interact$results$.interaction>=0.05),".feature"]))
+{
+	print(feature)
+	# Take the predictor
+	interact2 = Interaction$new(pred , feature = feature)		
+	
+	# Take unique interactinos
+	sig_interact<-unique(interact2$results[which(interact2$results$.interaction>0.025),".feature"])
+	
+	# Tajke variables
+	sig_interact<-sig_interact[!grepl("Age",sig_interact)]
+	sig_interact<-sig_interact[!grepl("Sex",sig_interact)]
+	sig_interact<-sig_interact[!grepl("DMT2_known",sig_interact)]
+	sig_interact<-sig_interact[!grepl("Smoking_known",sig_interact)]
+	
+	
+	# If there is at least one above threshold
+	if(sum(interact2$results$.interaction>0.025)>0)
+	{	
+		# Take the file name
+		file_name = paste("C:/Users/fv2/Documents/76LR_ilm_varImpo_",feature,".png",sep="")
+		
+		# Save results
+		interact2$results$.feature<-factor(interact2$results$.feature,levels=unique(interact2$results[order(interact2$results$.interaction),".feature"]))
+
+		# Replace dataset
+		interact2$results<-interact2$results[which(interact2$results$.class=="Yes"),]
+		
+
+		# Save plot
+		png(width = 7.0, height = 10.0, units = 'in', res = 600, file=file_name)				
+			#ggplot(df_var_importance_all, aes(x=accuracy_decrease, y=gini_decrease,Group=Ischemia,color=Ischemia))+ geom_point(size = 3)+theme_bw()+ylab("Densities [(Case.x - Contr.x)+ (Case.y - Contr.y))/2]")+xlab("index")+ scale_color_manual(values=c("black","#E69F00"))+theme(legend.position = "none")	+ theme(axis.text.x = element_blank(),axis.ticks = element_blank())+ geom_hline(yintercept = 0.0 , color = "#E69F00",linetype = 2)#+ylim(0,2)	
+			print(plot(interact2)+geom_vline(xintercept=0.025, linetype=2,size=1) + ggtitle(feature))
+		dev.off()
+		
+		# Grep biomolecules
+		variables<-as.vector(interact2$results[which(interact2$results$.interaction>=0.025),".feature"])
+		
+		# Tajke variables
+		variables<-variables[!grepl("Age",variables)]
+		variables<-variables[!grepl("Sex",variables)]
+		variables<-variables[!grepl("DMT2_known",variables)]
+		variables<-variables[!grepl("Smoking_known",variables)]
+		
+		# For each pair of interacting protein
+		for (interacting_pair in variables)
+		{
+			print(interacting_pair)
+			
+			# Sake name of biomolecules
+			biomolecule2<-unlist(strsplit(interacting_pair, ":", fixed = TRUE))[1]
+			biomolecule1<-unlist(strsplit(interacting_pair, ":", fixed = TRUE))[2]
+			#########################################################################################################################################  
+			# Create model
+			model <- randomForest(as.formula(paste("Ischemia ~  ",biomolecule1,"+",biomolecule2)), data=as.data.frame(splits$train))
+			
+			
+			# Set the scales
+			x_scale<-c(min(joint_molecules_logMeanCenter_work_red[,c(biomolecule1)]),max(joint_molecules_logMeanCenter_work_red[,c(biomolecule1)]))
+			y_scale<-c(min(joint_molecules_logMeanCenter_work_red[,c(biomolecule2)]),max(joint_molecules_logMeanCenter_work_red[,c(biomolecule2)]))
+			
+			
+			model=model
+			data_train=as.data.frame(splits$train)
+			data_valid=as.data.frame(splits$valid)
+			class="Ischemia"
+			predict_type= "class"
+			resolution=100
+			showgrid=TRUE
+			
+			# Relevel
+			data_train$Ischemia<-factor(data_train$Ischemia,levels=c("No","Yes"))
+			data_valid$Ischemia<-factor(data_valid$Ischemia,levels=c("No","Yes"))											
+			
+			# Fit lm models
+			glm.cat<-glm(formula=as.formula(paste("Ischemia ~ ",biomolecule1,"+",biomolecule2)),family=binomial(link='logit'), data=data_train, na.action=na.omit)												
+			
+	
+			# make grid
+			r_valid <- sapply(joint_molecules_logMeanCenter_work_red[,c(biomolecule1,biomolecule2)], range, na.rm = TRUE)
+			xs_valid <- seq(r_valid[1,1], r_valid[2,1], length.out = resolution)
+			ys_valid <- seq(r_valid[1,2], r_valid[2,2], length.out = resolution)												
+			Age_valid <- seq(min(joint_molecules_logMeanCenter_work_red$Age), max(joint_molecules_logMeanCenter_work_red$Age), length.out = resolution)												
+			g_valid <- cbind(rep(xs_valid, each=resolution), rep(ys_valid, time = resolution))		
+			# Create grid
+			#g_valid<-expand.grid(xs_valid,ys_valid,Sex=c("M","F"),DMT2_known=c("Yes","No"),Smoking_known=c("Yes","No"),Age=Age_valid)
+			# Rename columns
+			colnames(g_valid)[1:2] <- colnames(r_valid)
+			g_valid <- as.data.frame(g_valid)
+
+			# make grid
+			r <- sapply(joint_molecules_logMeanCenter_work_red[,c(biomolecule1,biomolecule2)], range, na.rm = TRUE)
+			xs <- seq(r[1,1], r[2,1], length.out = resolution)
+			ys <- seq(r[1,2], r[2,2], length.out = resolution)												
+			Age <- seq(min(joint_molecules_logMeanCenter_work_red$Age), max(joint_molecules_logMeanCenter_work_red$Age), length.out = resolution)												
+			g <- cbind(rep(xs, each=resolution), rep(ys, time = resolution))		
+			# Create grid
+			#g<-expand.grid(xs,ys,Sex=c("M","F"),DMT2_known=c("Yes","No"),Smoking_known=c("Yes","No"),Age=Age)
+			# Rename columns
+			colnames(g)[1:2] <- colnames(r)
+			g <- as.data.frame(g)
+			
+			### guess how to get class labels from predict
+			### (unfortunately not very consistent between models)
+			p <- predict(model, g, type = predict_type)
+			p1 <- predict(model, g, type = "prob")    
+			if(is.list(p)) p <- p$class
+			p <- as.factor(p)
+
+			# Create data.frame
+			df_mash<-data.frame(g,Ischemia=p,z=p1[,"Yes"])
+
+			# Rename comulns
+			data=data_train[,c(biomolecule1,biomolecule2,"Ischemia")]
+			colnames(data)<-c("biom1","biom2","output")
+			colnames(df_mash)<-c("biom1","biom2","output","z")
+
+			# Create plot
+			p1<- ggplot(df_mash, aes(biom1, biom2)) + geom_tile(aes(fill = output,alpha = 1/200))+ scale_fill_manual(values=c("black","#E69F00"))+ theme_classic() +xlab(biomolecule1)+ylab(biomolecule2)+labs(colour="Ischemia")
+			p2<-p1+  geom_point(aes(x=biom1, y=biom2, colour=output),data = data, size=3) + scale_color_manual(values=c("black","#E69F00"))+ theme_classic() +labs(colour="Ischemia")+  labs("Ischemia") + xlim(x_scale) + ylim(y_scale)
+							
+			
+			
+			
+			
+			### guess how to get class labels from predict
+			### (unfortunately not very consistent between models)
+			p <- predict(model, g_valid, type = predict_type)
+			p1 <- predict(model, g_valid, type = "prob")    
+			if(is.list(p)) p <- p$class
+			p <- as.factor(p)
+
+			# Create data.frame
+			df_mash<-data.frame(g_valid,Ischemia=p,z=p1[,"Yes"])
+
+			# Rename comulns
+			data=data_valid[,c(biomolecule1,biomolecule2,"Ischemia")]
+			colnames(data)<-c("biom1","biom2","output")
+			colnames(df_mash)<-c("biom1","biom2","output","z")
+
+			# Create plot
+			p1_test<- ggplot(df_mash, aes(biom1, biom2)) + geom_tile(aes(fill = output,alpha = 1/200))+ scale_fill_manual(values=c("black","#E69F00"))+ theme_classic() +xlab(biomolecule1)+ylab(biomolecule2)+labs(colour="Ischemia")
+			p2_test<-p1_test+  geom_point(aes(x=biom1, y=biom2, colour=output),data = data, size=3) + scale_color_manual(values=c("black","#E69F00"))+ theme_classic() +labs(colour="Ischemia")+  labs("Ischemia") + xlim(x_scale) + ylim(y_scale)
+			
+			
+			### (unfortunately not very consistent between models)
+			p <- predict(model, data_valid, type = predict_type)
+					
+			# Take the predictions
+			TrueLabels=factor(data_valid$Ischemia,levels=c("Yes","No"))
+			Predicted=factor(as.vector(p),levels=c("Yes","No"))
+
+			# Save confusion matrix results
+			cm_results<-confusionMatrix(TrueLabels,Predicted)			
+			
+			# Create
+			df_cm_rf<-data.frame(Values=cm_results$byClass[c(1,2,5,6,7,11)],Metric=names(cm_results$byClass[c(1,2,5,6,7,11)]))
+			
+			# Replace by NA
+			df_cm_rf[which(df_cm_rf$Values==0),"Values"]<-NA			
+			
+			# Create plot for accuracy
+			plot_cm_accuracy<-ggplot(df_cm_rf, aes(x=Metric,y=Values)) + geom_col()+ theme_classic()+ylim(0,1)+theme(legend.title = element_blank()) + coord_flip()+geom_text(aes(label = round(Values,3)), vjust = -0.1,hjust = -0.1)
+
+			# Get table
+			confusion_matrix <- as.data.frame(cm_results$table)
+						
+			# Rename column
+			colnames(confusion_matrix)<-c("predicted_class","actual_class","Freq")
+			
+			# confusion_matrix
+			confusion_matrix$Group=paste(confusion_matrix$predicted_class,confusion_matrix$actual_class,sep="-")
+			
+			# Create plot
+			cm_plot<-ggplot(data = confusion_matrix, mapping = aes(x = predicted_class, y = actual_class,fill=Group)) +	geom_tile(aes(fill = Group)) +	geom_text(aes(label = sprintf("%1.0f", Freq)), vjust = 1,color="white") + scale_fill_manual(values=c("black","#4D3500", "#996A00", "#E69F00")) + xlab("Predicted")+ ylab("Ischemia diagnosis")+ theme(legend.position = "none")				
+			
+			# Remove legend ggplot2
+			p2<-p2 + theme(legend.title = element_blank())
+						
+			# Take the file name
+			file_name = paste("C:/Users/fv2/Documents/rtree_",biomolecule1,"_",biomolecule2,".png",sep="")
+			
+			# Repeat for glm
+			### guess how to get class labels from predict
+			### (unfortunately not very consistent between models)						
+			p <- gsub("TRUE","Yes",gsub("FALSE","No",predict(glm.cat, g, type = "response")>0.5))
+			p1 <- predict(glm.cat, g, type = "response") 
+
+			if(is.list(p)) p <- p$class
+			p <- as.factor(p)
+
+			# Create data.frame
+			df_mash<-data.frame(g,Ischemia=p)
+
+			# Rename comulns
+			data=data_train[,c(biomolecule1,biomolecule2,"Ischemia")]
+			colnames(data)<-c("biom1","biom2","output")
+			colnames(df_mash)<-c("biom1","biom2","output")
+
+			# Create plot
+			p1<- ggplot(df_mash, aes(biom1, biom2)) + geom_tile(aes(fill = output,alpha = 1/200))+ scale_fill_manual(values=c("black","#E69F00"))+ theme_classic() +xlab(biomolecule1)+ylab(biomolecule2)+labs(colour="Ischemia")+ theme(legend.title = element_blank())
+			p_glm<-p1+  geom_point(aes(x=biom1, y=biom2, colour=output),data = data, size=3) + scale_color_manual(values=c("black","#E69F00"))+ theme_classic() +labs(colour="Ischemia")+  labs("Ischemia")+ theme(legend.title = element_blank()) + xlim(x_scale) + ylim(y_scale)
+			
+			# Repeat for glm
+			### guess how to get class labels from predict
+			### (unfortunately not very consistent between models)						
+			p <- gsub("TRUE","Yes",gsub("FALSE","No",predict(glm.cat, g_valid, type = "response")>0.5))
+			p1 <- predict(glm.cat, g_valid, type = "response") 
+
+			if(is.list(p)) p <- p$class
+			p <- as.factor(p)
+
+			# Create data.frame
+			df_mash<-data.frame(g_valid,Ischemia=p)
+
+			# Rename comulns
+			data=data_valid[,c(biomolecule1,biomolecule2,"Ischemia")]
+			colnames(data)<-c("biom1","biom2","output")
+			colnames(df_mash)<-c("biom1","biom2","output")
+
+			# Create plot
+			p1<- ggplot(df_mash, aes(biom1, biom2)) + geom_tile(aes(fill = output,alpha = 1/200))+ scale_fill_manual(values=c("black","#E69F00"))+ theme_classic() +xlab(biomolecule1)+ylab(biomolecule2)+labs(colour="Ischemia")+ theme(legend.title = element_blank())
+			p_glm_valid<-p1+  geom_point(aes(x=biom1, y=biom2, colour=output),data = data, size=3) + scale_color_manual(values=c("black","#E69F00"))+ theme_classic() +labs(colour="Ischemia")+  labs("Ischemia")+ theme(legend.title = element_blank())			 + xlim(x_scale) + ylim(y_scale)
+			
+			
+			### (unfortunately not very consistent between models)
+			p <- gsub("TRUE","Yes",gsub("FALSE","No",predict(glm.cat, data_valid, type = "response")>0.5))
+					
+			# Take the predictions
+			TrueLabels=factor(data_valid$Ischemia,levels=c("Yes","No"))
+			Predicted=factor(as.vector(p),levels=c("Yes","No"))
+
+			# Save confusion matrix results
+			cm_results<-confusionMatrix(TrueLabels,Predicted)			
+
+			# Get table
+			confusion_matrix <- as.data.frame(cm_results$table)
+			
+			# Create
+			df_cm_lm<-data.frame(Values=cm_results$byClass[c(1,2,5,6,7,11)],Metric=names(cm_results$byClass[c(1,2,5,6,7,11)]))
+			
+			# Replace by NA
+			df_cm_lm[which(df_cm_lm$Values==0),"Values"]<-NA
+			
+			# Create plot for accuracy
+			plot_lm_accuracy<-ggplot(df_cm_lm, aes(x=Metric,y=Values)) + geom_col()+ theme_classic()+ylim(0,1)+theme(legend.title = element_blank()) + coord_flip()+geom_text(aes(label = round(Values,3)), vjust = -0.1,hjust = -0.1)			
+			
+			# Rename column
+			colnames(confusion_matrix)<-c("predicted_class","actual_class","Freq")
+			
+			# confusion_matrix
+			confusion_matrix$Group=paste(confusion_matrix$predicted_class,confusion_matrix$actual_class,sep="-")
+			
+			# Create plot
+			cm_plot_glm<-ggplot(data = confusion_matrix, mapping = aes(x = predicted_class, y = actual_class,fill=Group)) +	geom_tile(aes(fill = Group)) +	geom_text(aes(label = sprintf("%1.0f", Freq)), vjust = 1,color="white") + scale_fill_manual(values=c("black","#4D3500", "#996A00", "#E69F00")) + xlab("Predicted")+ ylab("Ischemia diagnosis")+ theme(legend.position = "none")				
+			
+			# Remove legend ggplot2
+			p_glm<-p_glm + theme(legend.title = element_blank())
+			#####################################################################################################
+			# repeat for decision tree
+			data_train_sub<-data_train[,c(biomolecule1,biomolecule2,"Ischemia")]
+			
+			# Set colnames
+			colnames(data_train_sub)<-c("biom1","biom2","Ischemia")
+			
+			# repeat for decision tree
+			data_valid_sub<-data_valid[,c(biomolecule1,biomolecule2,"Ischemia")]
+			
+			# Set colnames
+			colnames(data_valid_sub)<-c("biom1","biom2","Ischemia")			
+			
+			# Repeat for glm
+			### guess how to get class labels from predict
+			### (unfortunately not very consistent between models)						
+			tree_model<-tree(as.formula(paste("Ischemia ~ ",biomolecule1,"+",biomolecule2)), data=data_train,method = "recursive.partition",split="deviance",control=tree.control(dim(data_train)[1], mincut = round(dim(data_train)[1]/10), minsize = round(dim(data_train)[1]/10)*2, mindev = 0.001))			
+						
+			# Plot tree
+			plot_tree_train<-ggplot(data=data_train_sub,aes(biom1, biom2, color=Ischemia)) + geom_point(size=3) + scale_color_manual(values=c("black","#E69F00"))+ theme_classic()  +theme(legend.position = "none")
+			plot_tree_train<-plot_tree_train+gg.partition.tree(tree_model,label="Ischemia") +xlab(biomolecule1)+ylab(biomolecule2) #+ xlim(x_scale) + ylim(y_scale)
+			
+									
+			# Plot tree
+			plot_tree_valid<-ggplot(data=data_valid_sub,aes(biom1, biom2, color=Ischemia)) + geom_point(size=3) + scale_color_manual(values=c("black","#E69F00"))+ theme_classic()  +theme(legend.position = "none")
+			plot_tree_valid<-plot_tree_valid+gg.partition.tree(tree_model,label="Ischemia") +xlab(biomolecule1)+ylab(biomolecule2)#			 + xlim(x_scale) + ylim(y_scale)				
+			
+			
+			# Take the predictions
+			TrueLabels=factor(data_valid$Ischemia,levels=c("Yes","No"))
+			Predicted=factor(as.vector(predict(tree_model, data_valid,type="class")),levels=c("Yes","No"))
+			
+			# Save confusion matrix results
+			cm_results<-confusionMatrix(TrueLabels,Predicted)			
+
+			# Get table
+			confusion_matrix <- as.data.frame(cm_results$table)
+			
+			# Create
+			df_cm_tree<-data.frame(Values=cm_results$byClass[c(1,2,5,6,7,11)],Metric=names(cm_results$byClass[c(1,2,5,6,7,11)]))
+			
+			# Replace by NA
+			df_cm_tree[which(df_cm_tree$Values==0),"Values"]<-NA
+			
+			# Create plot for accuracy
+			plot_tree_accuracy<-ggplot(df_cm_tree, aes(x=Metric,y=Values)) + geom_col()+ theme_classic()+ylim(0,1)+theme(legend.title = element_blank()) + coord_flip()+geom_text(aes(label = round(Values,3)), vjust = -0.1,hjust = -0.1)			
+			
+			# Rename column
+			colnames(confusion_matrix)<-c("predicted_class","actual_class","Freq")
+			
+			# confusion_matrix
+			confusion_matrix$Group=paste(confusion_matrix$predicted_class,confusion_matrix$actual_class,sep="-")
+			
+			# Create plot
+			cm_plot_tree<-ggplot(data = confusion_matrix, mapping = aes(x = predicted_class, y = actual_class,fill=Group)) +	geom_tile(aes(fill = Group)) +	geom_text(aes(label = sprintf("%1.0f", Freq)), vjust = 1,color="white") + scale_fill_manual(values=c("black","#4D3500", "#996A00", "#E69F00")) + xlab("Predicted")+ ylab("Ischemia diagnosis")+ theme(legend.position = "none")				
+
+			# Save plot
+			png(width = 20.0, height = 15.0, units = 'in', res = 600, file=file_name)				
+					# Trainning set
+					p2<-p2+ggtitle("Training set")
+
+					# Testing set
+					p2_test<-p2_test+ggtitle("Testing set set")	
+
+					# Testing set
+					cm_plot<-cm_plot+ggtitle("Testing set set")	
+					
+					# Testing set
+					plot_cm_accuracy<-plot_cm_accuracy+ggtitle("Testing set")												
+			
+					figure1<-ggarrange(p2,p2_test, cm_plot,plot_cm_accuracy,  common.legend = TRUE,legend="none",ncol = 4, nrow = 1)
+					figure1<-annotate_figure(figure1, top = text_grob(paste("Random Forest predictions with two variables:",paste(biomolecule1,biomolecule2,sep=" and "),sep=""),face = "bold", size = 12))				
+					
+					# Trainning set
+					p_glm<-p_glm+ggtitle("Training set")
+					
+					# Testing set
+					p_glm_valid<-p_glm_valid+ggtitle("Testing set")
+					
+					# Testing set
+					cm_plot_glm<-cm_plot_glm+ggtitle("Testing set")	
+					
+					# Testing set
+					plot_lm_accuracy<-plot_lm_accuracy+ggtitle("Testing set")	
+					
+
+					figure2<-ggarrange(p_glm,p_glm_valid, cm_plot_glm,plot_lm_accuracy,  common.legend = TRUE,legend="none",ncol = 4, nrow = 1)
+					figure2<-annotate_figure(figure2, top = text_grob(paste("Logistic regression predictions with two variables:",paste(biomolecule1,biomolecule2,sep=" and "),sep=""),face = "bold", size = 12))				
+					
+					# Trainning set
+					plot_tree_train<-plot_tree_train+ggtitle("Training set")
+					
+					# Testing set
+					plot_tree_valid<-plot_tree_valid+ggtitle("Testing set")
+					
+					# Testing set
+					cm_plot_tree<-cm_plot_tree+ggtitle("Testing set")	
+					
+					# Testing set
+					plot_tree_accuracy<-plot_tree_accuracy+ggtitle("Testing set")						
+					
+					figure3<-ggarrange(plot_tree_train,plot_tree_valid, cm_plot_tree,plot_tree_accuracy,  common.legend = TRUE,legend="none",ncol = 4, nrow = 1)
+					figure3<-annotate_figure(figure3, top = text_grob(paste("Decision tree predictions with two variables:",paste(biomolecule1,biomolecule2,sep=" and "),sep=""),face = "bold", size = 12))														
+					
+					figure<-ggarrange(figure1, figure2,figure3 ,common.legend = TRUE,legend="bottom",ncol = 1, nrow = 3)
+					print(figure)
+			dev.off()			
+						
+			
+			#########################################################################################################################################   
+			# Features effect for all the featuers
+			# I stopped here, Idd the tree surrogate 	
+			# Surrogate models
+			# Keep studying
+	
+		}
+							
+	}	
+}
+#########################################################################################################################################   
+# Create models
+library("randomForest")
+library("iml")
+library("tree")
+library("party")
+
+# Init predictor
+random_forest<-randomForest(Ischemia ~ Sex + Age + DMT2_known + Smoking_known + hsa_miR_10a + hsa_miR_1274b + hsa_miR_146b_5p + hsa_miR_183 + hsa_miR_1914b + hsa_miR_212 + hsa_miR_335 + hsa_miR_500b + hsa_miR_502_5p + hsa_miR_660 + Homoarginin + hsTroponinI + Cholesterin + HDLCholesterin + LDLCholesterin + Triglyceride + Glucose + HbA1c + sFLT_1 + SDF_1a + CTPROET1 + MRPROADM + MRPROANP + Insulin + CRP + Pro_BNP + Osteoprotegerin + MMP_9 + C12_1 + C18_2 + Hexose + lysoPC_a_C17_0 + lysoPC_a_C18_2 + lysoPC_a_C24_0 + lysoPC_a_C28_1 + PC_aa_C28_1 + PC_aa_C32_3 + PC_aa_C34_3 + PC_aa_C36_0 + PC_aa_C38_0 + PC_aa_C38_4 + PC_aa_C40_3 + PC_aa_C42_0 + PC_aa_C42_2 + PC_ae_C30_0 + PC_ae_C30_2 + PC_ae_C32_1 + PC_ae_C32_2 + PC_ae_C34_0 + PC_ae_C34_2 + PC_ae_C34_3 + PC_ae_C36_0 + PC_ae_C36_1 + PC_ae_C36_2 + PC_ae_C36_3 + PC_ae_C36_5 + PC_ae_C38_0 + PC_ae_C38_2 + PC_ae_C38_6 + PC_ae_C40_2 + PC_ae_C40_5 + PC_ae_C40_6 + PC_ae_C42_2 + PC_ae_C42_3 + Phe + SM_C16_0 + SM_C16_1 + SM_C24_0 + SM_C24_1 + SM_C26_0 + SM_C26_1 + SM_OH_C14_1 + SM_OH_C16_1 + SM_OH_C22_1 + SM_OH_C22_2 + SM_OH_C24_1,data=joint_molecules_logMeanCenter_work,localImp=TRUE,ntree = 10000,mtry=80)
+
+# Take the file name
+file_name = paste("C:/Users/fv2/Documents/rtree_surrogate.png",sep="")
+
+
+# Sake name of biomolecules
+biomolecule2<-unlist(strsplit(interacting_pair, ":", fixed = TRUE))[1]
+biomolecule1<-unlist(strsplit(interacting_pair, ":", fixed = TRUE))[2]
+#########################################################################################################################################  
+tree_random_forest<-partykit::ctree(formula=Ischemia ~ Sex + Age + DMT2_known + Smoking_known + hsa_miR_10a + hsa_miR_1274b + hsa_miR_146b_5p + hsa_miR_183 + hsa_miR_1914b + hsa_miR_212 + hsa_miR_335 + hsa_miR_500b + hsa_miR_502_5p + hsa_miR_660 + Homoarginin + hsTroponinI + Cholesterin + HDLCholesterin + LDLCholesterin + Triglyceride + Glucose + HbA1c + sFLT_1 + SDF_1a + CTPROET1 + MRPROADM + MRPROANP + Insulin + CRP + Pro_BNP + Osteoprotegerin + MMP_9 + C12_1 + C18_2 + Hexose + lysoPC_a_C17_0 + lysoPC_a_C18_2 + lysoPC_a_C24_0 + lysoPC_a_C28_1 + PC_aa_C28_1 + PC_aa_C32_3 + PC_aa_C34_3 + PC_aa_C36_0 + PC_aa_C38_0 + PC_aa_C38_4 + PC_aa_C40_3 + PC_aa_C42_0 + PC_aa_C42_2 + PC_ae_C30_0 + PC_ae_C30_2 + PC_ae_C32_1 + PC_ae_C32_2 + PC_ae_C34_0 + PC_ae_C34_2 + PC_ae_C34_3 + PC_ae_C36_0 + PC_ae_C36_1 + PC_ae_C36_2 + PC_ae_C36_3 + PC_ae_C36_5 + PC_ae_C38_0 + PC_ae_C38_2 + PC_ae_C38_6 + PC_ae_C40_2 + PC_ae_C40_5 + PC_ae_C40_6 + PC_ae_C42_2 + PC_ae_C42_3 + Phe + SM_C16_0 + SM_C16_1 + SM_C24_0 + SM_C24_1 + SM_C26_0 + SM_C26_1 + SM_OH_C14_1 + SM_OH_C16_1 + SM_OH_C22_1 + SM_OH_C22_2 + SM_OH_C24_1,data=joint_molecules_logMeanCenter_work,maxsurrogate = 2)
+
+
+# I stopped here
+# terminal space specifies at which value of y the terminal plots begin
+bh_plot <- ggparty(tree_random_forest, terminal_space = 0.5) +  geom_edge() +  geom_edge_label() +geom_node_splitvar()    
+bh_plot <-bh_plot +geom_node_plot(gglist = list(geom_bar(aes(x = "", fill = Ischemia), position = position_fill()),xlab("Cases and Control"),scale_color_manual(values=c("black","#E69F00")),scale_fill_manual(values=c("black","#E69F00"))))	
+
+
+bh_plot <- ggparty(tree_random_forest, terminal_space = 0.5) +  geom_edge() +  geom_edge_label() +geom_node_splitvar()    
+bh_plot <-bh_plot +geom_node_plot(gglist = list(geom_point(aes(y = C12_1, x=LDLCholesterin, color = Ischemia), position = position_fill()),scale_color_manual(values=c("black","#E69F00")),scale_fill_manual(values=c("black","#E69F00"))))	
+	
+# Create plotC
+
+# First quadrant
+joint_molecules_logMeanCenter_work_res<-joint_molecules_logMeanCenter_work[,c("LDLCholesterin","C12_1","Age","Sex","Ischemia","DMT2_known")]
+joint_molecules_logMeanCenter_work_res$LDL_greater_011<-joint_molecules_logMeanCenter_work_res$LDLCholesterin>0.11228422230
+joint_molecules_logMeanCenter_work_res$LDL_smaller_011<-joint_molecules_logMeanCenter_work_res$LDLCholesterin<=0.11228422230
+joint_molecules_logMeanCenter_work_res$C12_1_smaller036<-joint_molecules_logMeanCenter_work_res$C12_1<0.3682984254
+joint_molecules_logMeanCenter_work_res$C12_1_greater036<-joint_molecules_logMeanCenter_work_res$C12_1>=0.3682984254
+joint_molecules_logMeanCenter_work_res$LDL_greater_011_C12_1_smaller_036<-(joint_molecules_logMeanCenter_work_res$LDLCholesterin>0.11228422230 & joint_molecules_logMeanCenter_work_res$C12_1<0.3682984254)
+joint_molecules_logMeanCenter_work_res$LDL_greater_011_C12_1_greater_036<-(joint_molecules_logMeanCenter_work_res$LDLCholesterin>0.11228422230 & joint_molecules_logMeanCenter_work_res$C12_1>=0.3682984254)
+
+
+# Collect the ids
+id_LDL_smaller_011<-rownames(joint_molecules_logMeanCenter_work_res[which(joint_molecules_logMeanCenter_work_res$LDL_smaller_011),])
+id_LDL_greater_011_C12_1_smaller_036<-rownames(joint_molecules_logMeanCenter_work_res[which(joint_molecules_logMeanCenter_work_res$LDL_greater_011_C12_1_smaller_036),])
+id_LDL_greater_011_C12_1_greater_036<-rownames(joint_molecules_logMeanCenter_work_res[which(joint_molecules_logMeanCenter_work_res$LDL_greater_011_C12_1_greater_036),])
+
+# Copy dataset
+global_joint_molecules_logMeanCenter_work<-joint_molecules_logMeanCenter_work
+
+# Rownames
+rownames(global_joint_molecules_logMeanCenter_work)<-gsub("PATIENT","",rownames(global_joint_molecules_logMeanCenter_work))
+
+# Complete data.frame
+complete_df<-rbind(data.frame(global_joint_molecules_logMeanCenter_work[,c("Sex","Smoking_known","DMT2_known","Ischemia")],Group="Whole dataset"),
+data.frame(joint_molecules_logMeanCenter_work[id_LDL_smaller_011,c("Sex","Smoking_known","DMT2_known","Ischemia")],Group="LDL_s_011"),
+data.frame(joint_molecules_logMeanCenter_work[id_LDL_greater_011_C12_1_smaller_036,c("Sex","Smoking_known","DMT2_known","Ischemia")],Group="LDL_g_011_C12_1_s_036"),
+data.frame(joint_molecules_logMeanCenter_work[id_LDL_greater_011_C12_1_greater_036,c("Sex","Smoking_known","DMT2_known","Ischemia")],Group="LDL_g_011_C12_1_g_036"))
+
+
+
+counts_ischemia<-complete_df %>% group_by(Ischemia,Group) %>% tally
+counts_Sex<-complete_df %>% group_by(Sex,Group) %>% tally
+counts_DMT2<-complete_df %>% group_by(DMT2_known,Group) %>% tally
+
+# Create results
+df_ischemia<-cbind(data.frame(counts_ischemia[counts_ischemia$Ischemia=="Yes",c("Group","Ischemia","n")]),
+data.frame(counts_ischemia[counts_ischemia$Ischemia=="No",c("Ischemia","n")]))
+
+# Create results
+df_Sex<-cbind(data.frame(counts_Sex[counts_Sex$Sex=="F",c("Group","Sex","n")]),
+data.frame(counts_Sex[counts_Sex$Sex=="M",c("Sex","n")]))
+
+# Create results
+df_DMT2<-cbind(data.frame(counts_DMT2[counts_DMT2$DMT2_known=="Yes",c("Group","DMT2_known","n")]),
+data.frame(counts_DMT2[counts_DMT2$DMT2_known=="No",c("DMT2_known","n")]))
+
+# Ischemic ration
+df_ischemia$IschemicRatio<-df_ischemia[,3]/df_ischemia[,5]
+df_Sex$FemaleRatio<-df_Sex[,3]/df_Sex[,5]
+df_DMT2$DiabeticRatio<-df_DMT2[,3]/df_DMT2[,5]
+
+# Set colnames
+colnames(df_ischemia)<-c("Group","Ischemia=Yes","Ischemia=Yes","n","Ischemia=No","IschemicRatio")
+colnames(df_Sex)<-c("Group","","Sex=F","","Sex=M","FemaleRatio")
+colnames(df_DMT2)<-c("Group","","DMT2=Yes","","DMT2=No","DiabeticRatio")
+
+df_ischemia<-df_ischemia[,-c(2,4)]
+df_Sex<-df_Sex[,-c(2,4)]
+df_DMT2<-df_DMT2[,-c(2,4)]
+
+
+g1 <- tableGrob( df_ischemia, rows = NULL)	
+g2 <- tableGrob( df_Sex, rows = NULL)	
+g3 <- tableGrob( df_DMT2, rows = NULL)	
+
+ischemia_plot<-ggplot(data=complete_df, aes(x="",  fill=Ischemia)) +  geom_bar(stat="count")+scale_color_manual(values=c("black","#E69F00"))+scale_fill_manual(values=c("black","#E69F00"))+theme_bw()+facet_wrap( ~ Group, scale = "free",ncol=4) +xlab("")
+dmt2_plot<-ggplot(data=complete_df, aes(x="",  fill=DMT2_known)) +  geom_bar(stat="count")+scale_color_manual(values=c("black","#E69F00"))+scale_fill_manual(values=c("#3c690f","#a50f15"))+theme_bw()+facet_wrap( ~ Group, scale = "free",ncol=4)+xlab("")
+sex_plot<-ggplot(data=complete_df, aes(x="",  fill=Sex)) +  geom_bar(stat="count")+scale_color_manual(values=c("black","#E69F00"))+scale_fill_manual(values=c("#CC79A7","#0072B2"))+theme_bw()+facet_wrap( ~ Group, scale = "free",ncol=4)+xlab("")
+
+
+
+# Save plot
+png(width = 15.0, height = 10.00, units = 'in', res = 600, file=file_name)				
+	ggarrange(ischemia_plot,dmt2_plot,sex_plot, nrow=3,ncol=1)
+dev.off()	
+
+# Save plot
+png(width = 6.0, height = 5.50, units = 'in', res = 600, file=file_name)				
+	grid.arrange(g1,g2,g3, nrow=3,ncol=1)
+dev.off()	
+
+
+
+joint_molecules_logMeanCenter_work_sub1<-joint_molecules_logMeanCenter_work_res[ which(joint_molecules_logMeanCenter_work_res$LDLCholesterin<=0.11228422230),]
+joint_molecules_logMeanCenter_work_sub2<-joint_molecules_logMeanCenter_work_res[which(joint_molecules_logMeanCenter_work_res$LDLCholesterin>0.11228422230),]
+joint_molecules_logMeanCenter_work_sub2<-joint_molecules_logMeanCenter_work_sub2[which(joint_molecules_logMeanCenter_work_sub2$C12_1<0.3682984254),]
+joint_molecules_logMeanCenter_work_sub3<-joint_molecules_logMeanCenter_work_res[which(joint_molecules_logMeanCenter_work_res$LDLCholesterin>0.11228422230),]
+joint_molecules_logMeanCenter_work_sub3<-joint_molecules_logMeanCenter_work_sub3[which(joint_molecules_logMeanCenter_work_sub3$C12_1>=0.3682984254),]
+joint_molecules_logMeanCenter_work_res<-joint_molecules_logMeanCenter_work[,c("LDLCholesterin","C12_1","Age","Sex","Ischemia","DMT2_known")]
+joint_molecules_logMeanCenter_work_sub4<-joint_molecules_logMeanCenter_work_res[ which(joint_molecules_logMeanCenter_work_res$C12_1>=0.3682984254),]
+
+
+p1<- ggplot(joint_molecules_logMeanCenter_work_sub1, aes(x=LDLCholesterin, y=C12_1,col=Ischemia)) + scale_fill_manual(values=c("black","#E69F00"))+ theme_classic() + geom_point(size=3)+scale_color_manual(values=c("black","#E69F00"))+xlim(c(min(joint_molecules_logMeanCenter_work$LDLCholesterin),max(joint_molecules_logMeanCenter_work$LDLCholesterin)))+ylim(c(min(joint_molecules_logMeanCenter_work$C12_1),max(joint_molecules_logMeanCenter_work$C12_1)))
+p2<- ggplot(joint_molecules_logMeanCenter_work_sub2, aes(x=LDLCholesterin, y=C12_1,col=Ischemia)) + scale_fill_manual(values=c("black","#E69F00"))+ theme_classic() + geom_point(size=3)+scale_color_manual(values=c("black","#E69F00"))+xlim(c(min(joint_molecules_logMeanCenter_work$LDLCholesterin),max(joint_molecules_logMeanCenter_work$LDLCholesterin)))+ylim(c(min(joint_molecules_logMeanCenter_work$C12_1),max(joint_molecules_logMeanCenter_work$C12_1)))
+p3<- ggplot(joint_molecules_logMeanCenter_work_sub3, aes(x=LDLCholesterin, y=C12_1,col=Ischemia)) + scale_fill_manual(values=c("black","#E69F00"))+ theme_classic() + geom_point(size=3)+scale_color_manual(values=c("black","#E69F00"))+xlim(c(min(joint_molecules_logMeanCenter_work$LDLCholesterin),max(joint_molecules_logMeanCenter_work$LDLCholesterin)))+ylim(c(min(joint_molecules_logMeanCenter_work$C12_1),max(joint_molecules_logMeanCenter_work$C12_1)))
+
+ggarrange(p1,p2,p3,ncol = 3, nrow = 1,common.legend = TRUE)
+
+
+# Evaluate signatures
+signatures<-list(
+LDL_Only=c("Age","Sex","LDLCholesterin"),
+C12_1_Only=c("Age","Sex","C12_1"),
+LDL_C12_1=c("Age","Sex","LDLCholesterin","C12_1"),
+LDL_C12_1_int=c("Age","Sex","LDLCholesterin","C12_1","LDLCholesterin*C12_1"),
+LDL_s_011=c("Age","Sex","LDL_greater_011"),
+C12_1_s_036=c("Age","Sex","C12_1_smaller036"),
+LDL_g_011_C12_1_g_036=c("Age","Sex","LDL_greater_011","C12_1_greater036"),
+LDL_g_011_C12_1_g_036_int=c("Age","Sex","LDL_greater_011","C12_1_greater036","LDL_greater_011*C12_1_greater036"))
+
+# Save datasets
+datasets<-list("All"=joint_molecules_logMeanCenter_work_res)
+
+# Only variabales
+roc_molecules<-list()
+
+# ITERATE index
+IT=1
+
+# For each dataset
+for (dataset in names(datasets))
+{
+	# Print the name of the signature
+	print(dataset)
+	
+	# Save dataset 
+	df_dataset<-datasets[[dataset]]
+	
+	# Only variabales
+	roc_molecules<-list()
+	
+	df_results_results<-data.frame()
+	#colnames(df_results_results)<-c("Age","Sex","LDL","C12_1","LDL_s","C12_g","C12_s","LDL_g_C12_g")
+	
+	# For each signature
+	for (signature in names(signatures))
+	{
+		#print(signature)
+		
+		# Take the signature
+		signature_formula<-as.formula(paste("Ischemia ~",paste0(signatures[[signature]],collapse=" + "),sep=" "))
+		
+		print(signature_formula)
+		
+		# Run glm
+		glm.full<-glm(formula=signature_formula,family=binomial(link='logit'), data=df_dataset, na.action=na.omit)
+		
+		
+		age_df<-summary(glm.full)$coefficients[grepl("Age",rownames(summary(glm.full)$coefficients),fixed=TRUE),]
+		sex_df<-summary(glm.full)$coefficients[grepl("Sex",rownames(summary(glm.full)$coefficients),fixed=TRUE),]
+		LDL_df<-summary(glm.full)$coefficients[rownames(summary(glm.full)$coefficients) %in% "LDLCholesterin",]
+		C12_df<-summary(glm.full)$coefficients[rownames(summary(glm.full)$coefficients) %in% "C12_1",]						
+		LDL_g_df<-summary(glm.full)$coefficients[rownames(summary(glm.full)$coefficients) %in% "LDL_greater_011TRUE",]
+		C12_g_df<-summary(glm.full)$coefficients[rownames(summary(glm.full)$coefficients) %in% "C12_1_greater036TRUE",]						
+		LDL_g_C12_g<-summary(glm.full)$coefficients[rownames(summary(glm.full)$coefficients) %in% "LDL_greater_011TRUE:C12_1_greater036TRUE",]
+		LDL_C12_int_df<-summary(glm.full)$coefficients[rownames(summary(glm.full)$coefficients) %in% "LDLCholesterin:C12_1",]
+						
+		# Merge values
+		merged_values<-c(age_df[c("Pr(>|z|)")],	
+		sex_df[c("Pr(>|z|)")],
+		LDL_df[c("Pr(>|z|)")],
+		C12_df[c("Pr(>|z|)")],
+		LDL_C12_int_df[c("Pr(>|z|)")],
+		LDL_g_df[c("Pr(>|z|)")],
+		C12_g_df[c("Pr(>|z|)")],
+		LDL_g_C12_g[c("Pr(>|z|)")])
+		
+		# Merge values
+		merged_values<-c(age_df[c("Estimate")],	
+		sex_df[c("Estimate")],
+		LDL_df[c("Estimate")],
+		C12_df[c("Estimate")],
+		LDL_C12_int_df[c("Estimate")],
+		LDL_g_df[c("Estimate")],
+		C12_g_df[c("Estimate")],
+		LDL_g_C12_g[c("Estimate")])		
+		
+		
+		
+		# Re-set names		
+		names(merged_values)<-c("Age","Sex","LDL","C12_1","LDL_C12","LDL_s","C12_g","LDL_g_C12_g")
+		
+		df_results_results<-rbind(df_results_results,merged_values)
+		colnames(df_results_results)<-c("Age","Sex","LDL","C12_1","LDL_C12","LDL_s","C12_g","LDL_g_C12_g")
+
+		# Add to list
+		roc_molecules[[signature]] <- roc(Ischemia~glm.full$fitted.values, data = df_dataset, plot = FALSE,ci=TRUE)				
+		
+	}
+	# Vector names
+	vc_roc_names<-c()
+	
+	# Save new names for roc curve 
+	for (signature in names(roc_molecules))
+	{	
+		# Calculate CI
+		CI<-round(as.vector(roc_molecules[[signature]]$ci),3)	
+			
+
+		# Calculate CI
+		CI<-round(as.vector(roc_molecules[[signature]]$ci),3)	
+			
+		# Save name of full model
+		AUC<-paste("AUC=",CI[2]," 95%CI=",CI[1],"-",CI[3],sep="")	
+		
+		# Save names
+		vc_roc_names<-c(vc_roc_names,paste(signature,AUC))	
+	}
+	# Redraw names
+	names(roc_molecules)<-vc_roc_names
+	
+	# Take the file name
+	file_name = paste("C:/Users/fv2/Documents/roc_surrogate_",IT,".png",sep="")
+	
+	# Save plot
+	png(width = 7.0, height = 7.0, units = 'in', res = 600, file=file_name)				
+		# Trainning set		
+		print(ggroc(roc_molecules[c(1:5,7,8)])+ geom_line()+ theme_bw()+ ggtitle(paste("ROC curve analysis on dataset: ",dataset,sep=""))+ theme(legend.position = c(0.55, 0.15), legend.background = element_rect(color = NA,fill = NA, size = 1, linetype = "solid"))+theme(legend.title = element_blank())+ scale_color_manual(values = c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00"))	)
+	dev.off()	
+	
+	IT<-IT+1
+}
+##############################################################################
+# data wrangling
+# data wrangling
+library(tidyverse)
+library(readr)
+library(caret)
+library(gridExtra)
+library(grid)
+library(ggridges)
+library(ggthemes)
+theme_set(theme_minimal())
+library(iml)
+library(breakDown)
+library(DALEX)
+library(randomForest)
+library(lime)
+library(stringdist)
+library("dendextend")
+#########################################################################################################################################  
+joint_molecules_logMeanCenter_work<-readRDS(file = "/tmp/joint_molecules_logMeanCenter_work2.rds")
+# Another more graphical view of the same information (2 first sentences only)
+# Create plot
+p1<- ggplot(joint_molecules_logMeanCenter_work, aes(x=LDLCholesterin, y=C12_1,color=Ischemia))+ geom_point(size = 3)+theme_bw()+ scale_color_manual(values=c("black","#E69F00"))+ scale_fill_manual(values=c("black","#E69F00"))+ theme_classic() 
+p2<-p1 + geom_vline(xintercept = 0.11228,linetype=2,size=1.0)+ geom_segment(aes(x = 0.11228, y = 0.3683, xend = max(LDLCholesterin), yend = 0.3683),linetype=2,size=1.0) + theme(legend.position="bottom")
+p2<- p2+ annotate(geom="text", x=0.11228-3.5, y=0.3683,label="LDLCholesterin <= 0.11228" )
+p2<- p2+ annotate(geom="text", x=1.5, y=-2,label="C12_1 <= 0.3683" )
+#p2<- p2+ annotate(geom="label", x=2.5, y=0.3683+0.4,label="C12_1 > 0.3683" )+xlim(-3,3)
+
+
+
+
+#########################################################################################################################################  
+# Create random forest model
+tree_model<-randomForest(formula=Ischemia ~ Sex + Age + DMT2_known + Smoking_known + hsa_miR_10a + hsa_miR_1274b + hsa_miR_146b_5p + hsa_miR_183 + hsa_miR_1914b + hsa_miR_212 + hsa_miR_335 + hsa_miR_500b + hsa_miR_502_5p + hsa_miR_660 + Homoarginin + hsTroponinI + Cholesterin + HDLCholesterin + LDLCholesterin + Triglyceride + Glucose + HbA1c + sFLT_1 + SDF_1a + CTPROET1 + MRPROADM + MRPROANP + Insulin + CRP + Pro_BNP + Osteoprotegerin + MMP_9 + C12_1 + C18_2 + Hexose + lysoPC_a_C17_0 + lysoPC_a_C18_2 + lysoPC_a_C24_0 + lysoPC_a_C28_1 + PC_aa_C28_1 + PC_aa_C32_3 + PC_aa_C34_3 + PC_aa_C36_0 + PC_aa_C38_0 + PC_aa_C38_4 + PC_aa_C40_3 + PC_aa_C42_0 + PC_aa_C42_2 + PC_ae_C30_0 + PC_ae_C30_2 + PC_ae_C32_1 + PC_ae_C32_2 + PC_ae_C34_0 + PC_ae_C34_2 + PC_ae_C34_3 + PC_ae_C36_0 + PC_ae_C36_1 + PC_ae_C36_2 + PC_ae_C36_3 + PC_ae_C36_5 + PC_ae_C38_0 + PC_ae_C38_2 + PC_ae_C38_6 + PC_ae_C40_2 + PC_ae_C40_5 + PC_ae_C40_6 + PC_ae_C42_2 + PC_ae_C42_3 + Phe + SM_C16_0 + SM_C16_1 + SM_C24_0 + SM_C24_1 + SM_C26_0 + SM_C26_1 + SM_OH_C14_1 + SM_OH_C16_1 + SM_OH_C22_1 + SM_OH_C22_2 + SM_OH_C24_1,data=joint_molecules_logMeanCenter_work,ntree=10000,mtry=6)
+
+# Data.frame of variable importance
+df_varImp<-data.frame(varImp=varImp(tree_model),feature=names(varImp(tree_model)))
+
+# Take top 30 variables
+selected<-rownames(df_varImp[order(-df_varImp$Overall),][1:30,])
+
+#########################################################################################################################################  
+result_tables<-data.frame()
+# list of tables
+# Repeat 100 times
+for (bootstrap in 1:1000)
+{
+	print(bootstrap)
+
+	#########################################################################################################################################  
+	# Fix the ratio
+	ratio<-0.80
+
+	# First for group1
+	joint_molecules_logMeanCenter_work_no<-joint_molecules_logMeanCenter_work[which(joint_molecules_logMeanCenter_work$Ischemia=="No"),]
+	joint_molecules_logMeanCenter_work_yes<-joint_molecules_logMeanCenter_work[which(joint_molecules_logMeanCenter_work$Ischemia=="Yes"),]
+
+
+	# Training samples
+	trainning_samples_yes<-sample(rownames(joint_molecules_logMeanCenter_work_yes),length(rownames(joint_molecules_logMeanCenter_work_yes))*ratio)
+	trainning_samples_no<-sample(rownames(joint_molecules_logMeanCenter_work_no),length(rownames(joint_molecules_logMeanCenter_work_no))*ratio)
+
+	# Set training
+	# Training samples
+	training<-c(trainning_samples_yes,trainning_samples_no)
+	testing_yes<-rownames(joint_molecules_logMeanCenter_work_yes)[!rownames(joint_molecules_logMeanCenter_work_yes) %in% trainning_samples_yes]
+	testing_no<-rownames(joint_molecules_logMeanCenter_work_no)[!rownames(joint_molecules_logMeanCenter_work_no) %in% trainning_samples_no]
+	testing<-c(testing_yes,testing_no)
+
+	# Create splits
+	splits<-list(train=joint_molecules_logMeanCenter_work[c(training),c(selected,"Ischemia")],valid=joint_molecules_logMeanCenter_work[c(testing),c(selected,"Ischemia")])
+
+	# Create random forest model
+	tree_model<-randomForest(formula=as.formula(paste("Ischemia ~ ",paste(selected,collapse=" + "),sep="")),data=splits$train,ntree=2000,mtry=6)
+
+	# For the ilm
+	X = splits$train[which(names(splits$train) != "Ischemia")]
+
+	# Set variables
+	variables<-selected
+
+	#explainer <- lime(x=joint_molecules_logMeanCenter_work, model=as_classifier(tree_model))
+	explainer <- lime(x=X, model=as_classifier(tree_model))
+
+	# For the ilm
+	X = splits$valid[which(names(splits$valid) != "Ischemia")]
+
+	# Create explanation
+	#explanation_ischemic <- explain(splits$valid[rownames(group1),], explainer, n_labels = 1, n_features = 5)
+	#explanation_glm <- explain(splits$valid[rownames(group1),], explanation_ischemic, n_features = 5, labels = "Yes", kernel_width = .1, feature_select = "highest_weights")
+	#explanation_ischemic <- explain(splits$valid[testing,], explainer, n_labels = 1,feature_select="forward_selection", n_features = 10)
+	explanation_ischemic <- explain(X, explainer, n_labels = 1,feature_select="none", n_features = length(variables))
+
+	# Convert to data.frame
+	df_explanation_ischemic<-data.frame(as.data.frame(explanation_ischemic),Boot=bootstrap)
+	
+	# Add to bootstrap table 
+	result_tables<-rbind(result_tables,df_explanation_ischemic)
+}
+######################################################################################################################################### 
+# Set variables
+variables<-selected
+
+# Set membership
+result_tables$Membership<-0
+
+# First, for each feature, I will cluster the feature_desc 
+for (feature in variables)
+{
+	print(feature)
+	# Take all the feature_desc
+	feature_desc<-unique(result_tables[which(result_tables$feature==feature),"feature_desc"])
+
+	# Create distance matrix
+	distmatrix<-stringdistmatrix(as.vector(feature_desc), useNames=TRUE ,method = "dl")
+
+	# Create clusters
+	membership<-cutree(hclust(distmatrix),k=3)
+	
+	# Create data.frame
+	df_features_label<-data.frame()
+
+	# for each cluster add name
+	for (cluster in unique(membership))
+	{
+		# Create table with labelx
+		df_features_label<-rbind(df_features_label,data.frame(Features_desc=names(membership[membership==cluster]),label=names(membership[membership==cluster])[1]))
+	}
+	# Set rownames
+	rownames(df_features_label)<-df_features_label$Features_desc
+
+	# Set membership	
+	result_tables[which(result_tables$feature==feature),"Membership"]<-as.vector(df_features_label[result_tables[which(result_tables$feature==feature),"feature_desc"],"label"])
+
+}
+	
+#########################################################################################################################################  	
+# Take unique
+list_rownames<-unique(result_tables$case)
+list_colnames<-unique(result_tables$Membership)
+
+# Data.frame
+df_feature_desc<-data.frame(matrix(NA, nrow =  length(list_rownames), ncol =  length(list_colnames)))
+
+# Set colnames
+colnames(df_feature_desc)<-list_colnames
+rownames(df_feature_desc)<-list_rownames
+
+# Number of lines
+total_lines<-length(list_rownames)
+
+# Iterator
+IT<-0
+
+# For each patients
+for (case_line in list_rownames)
+{
+	# Take all the values for that patient
+	patient_data<-result_tables[which(result_tables$case==case_line),]
+
+	# Increment
+	IT<-IT+1	
+
+	# Print progress
+	print(paste(IT,total_lines,sep=":"))	
+	
+	# For each boostrap
+	for (case_patient in list_colnames)
+	{				
+		# Replacement
+		replacement<-mean(patient_data[which(patient_data$Membership==case_patient),"feature_weight"])
+			
+		# If not zero
+		if(!is.na(replacement))
+		{
+			# Bind element		
+			df_feature_desc[case_line,case_patient]<-replacement
+		}			
+	}
+}
+#########################################################################################################################################  	
+# Counte features
+count_elements<-data.frame()
+# For each row
+for (col_i in colnames(df_feature_desc))
+{
+	# Take the col
+	col_values<-df_feature_desc[,col_i]
+
+	# Check how many elements are greater than 0
+	count_elements<-rbind(count_elements,data.frame(Feature=col_i,Count=sum(!is.na(col_values))))
+	
+}
+######################################################################################################################################### 
+# Filtering parameter
+m=50
+
+# Select features to show
+filter_rows<-as.vector(count_elements[count_elements$Count>length(rownames(df_feature_desc))*m/100,"Feature"])
+
+######################################################################################################################################### 
+df_feature_desc<-t(df_feature_desc)
+# Filter out
+df_feature_desc_filt<-df_feature_desc[filter_rows,]
+
+# Create barplot for ploting
+df_barplot<-data.frame(ID=sort(unique(explanation_ischemic$case)),count=1, x=1:length(unique(explanation_ischemic$case)),Ischemia=splits$valid[sort(unique(explanation_ischemic$case)),"Ischemia"])
+
+Category_1<-splits$valid[as.vector(df_barplot$ID),"LDLCholesterin"]<=0.11228
+Category_2<-(splits$valid[as.vector(df_barplot$ID),"LDLCholesterin"]>0.11228 & splits$valid[as.vector(df_barplot$ID),"C12_1"]>=0.3683)
+Category_3<-(splits$valid[as.vector(df_barplot$ID),"LDLCholesterin"]>0.11228 & splits$valid[as.vector(df_barplot$ID),"C12_1"]<0.3683)
+
+
+# Set the corhorts
+df_barplot$Category<-0
+df_barplot[Category_1,"Cohort"]<-"1"
+df_barplot[Category_2,"Cohort"]<-"2"
+df_barplot[Category_3,"Cohort"]<-"3"
+
+# Set sex
+df_barplot$Sex<-joint_molecules_logMeanCenter_work[as.vector(df_barplot$ID),"Sex"]
+df_barplot$DMT2_known<-joint_molecules_logMeanCenter_work[as.vector(df_barplot$ID),"DMT2_known"]
+df_barplot$Smoking_known<-joint_molecules_logMeanCenter_work[as.vector(df_barplot$ID),"Smoking_known"]
+
+# St rownmaes
+rownames(df_barplot)<-as.vector(df_barplot$ID)
+df_barplot<-df_barplot[,-c(1:3,5)]
+anno_colors<-varColor[c("Ischemia","Sex","DMT2_known","Smoking_known")]
+anno_colors<-varColor[c("Smoking_known","DMT2_known","Sex","Ischemia")]
+anno_colors[["Cohort"]]<-c("1"="#D55E00","2"="#009E73","3"="#0072B2")
+
+# Create pheatmap
+df_feature_desc_scale<-scale(df_feature_desc_filt)
+
+# Return optimal number os clusters
+#hvlust_samples<-hclust(dist(t(df_feature_desc_scale)),method="ward.D2")
+hvlust_samples<-hclust(as.dist(1-cor(df_feature_desc_scale, method = "pearson", use = "complete.obs")),method="ward.D2")
+#hvlust_samples<-hclust(dist(t(df_feature_desc_scale)),method="centroid")
+hvlust_molecules<-hclust(dist(df_feature_desc_scale),method="ward.D2")
+
+tree_row<-hvlust_molecules
+tree_col<-hvlust_samples
+
+
+# Results
+df_results<-data.frame()
+
+# For each row_element
+for (row_i in rownames(order_varImp))
+{
+
+	try(
+	{
+	res<-data.frame(ID=row_i,line=rownames(df_feature_desc_scale)[which(grepl(row_i, rownames(df_feature_desc_scale), ignore.case = TRUE, perl = FALSE,fixed = FALSE, useBytes = FALSE))])
+	# Bind results
+	df_results<-rbind(df_results,res)
+	
+	}
+	,silent=TRUE)		
+}
+
+new_order_samples<-rownames(df_barplot[order(df_barplot$Ischemia,df_barplot$Cohort,df_barplot$Sex,df_barplot$Cohort,df_barplot$DMT2_known,df_barplot$Smoking_known),])
+new_order_molecules<-as.vector(df_results$line)
+
+
+
+res<-pheatmap(df_feature_desc_scale[new_order_molecules,new_order_samples], scale="none",color = viridis(8),annotation_col=df_barplot,annotation_colors=anno_colors,cluster_rows=FALSE,cluster_cols=FALSE)	
+
+
+# Save plot
+png(width = 15, height = 10, units = 'in', res = 600, file=file_name)				
+	#plot_explanations(explanation_ischemic)
+	res	
+dev.off()
+
+
+
+file_name<-"C:/Users/fv2/Documents/plot_explanations.png"
+# Save plot
+png(width = 7.0, height = 7, units = 'in', res = 600, file=file_name)				
+	#plot_explanations(explanation_ischemic)
+	plot_explanations(explanation_ischemic)	
+dev.off()
+
+file_name<-"C:/Users/fv2/Documents/plot_explanations_label.png"
+# Save plot
+png(width = 4.0, height = 1.5, units = 'in', res = 600, file=file_name)				
+	#plot_explanations(explanation_ischemic)
+	Figure1<-ggarrange(label_plot, cohort_plot,common.legend = FALSE,ncol = 1, nrow = 2)
+	print(Figure1)
+dev.off()	
+
+
+
+
