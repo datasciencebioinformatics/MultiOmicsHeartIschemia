@@ -1,0 +1,3703 @@
+library(doParallel)
+library(data.table)
+library(data.table)
+library(dplyr)
+library(formattable)
+library(tidyr)
+library(xlsx)
+library(Cairo)
+library(gtable)
+library(gridExtra)
+library(waffle)
+library(extrafont)
+library(ggplot2)
+library("plyr")
+library("pheatmap")
+library(gridExtra)
+library(grid)
+library(ggthemes)
+library(FactoMineR)
+library(ggrepel)
+library(ggforce)
+library(Cairo)
+source("/home/flealvalentim/scripts/RScript_PREMED_load_functions.R")
+source("/home/flealvalentim/scripts/Function_plot_Circos.R")
+source("/home/flealvalentim/scripts/Function_plot_Circos2.R")
+##########################################################################################################################################
+# Set output
+outputfolder="/home/flealvalentim/data/PREMED-CAD/"
+##########################################################################################################################################
+library("dendextend")
+library("viridis")
+# Load biomarkers dataset
+# Use only data for which the all datasets are present  as.vector(CAD_Patients_Age$ID_PATIENT)
+# Plot patients vs. biomarkers
+# Try clustering/non-clustering (ordering Ischemia/Sex)
+# Number of biomarkers
+# Process MRI data
+#Load patient data
+CAD_Biomarkers<-load_data_Biomarkers_complete_raw()
+
+##########################################################################################################################################
+# Save data
+biomarkers_raw<-load_data_Biomarkers_complete_raw()
+microRNA_raw<-load_data_microRNA_noOutilers_raw()
+Metabolites_raw<-load_data_Metabolites_noOutilers_raw()
+
+# Intersecton of patients
+ID_intersect<-intersect(intersect(rownames(biomarkers_raw),rownames(microRNA_raw)),rownames(Metabolites_raw))
+
+# Take the log expression of each molecule and put it together
+joint_molecules<-cbind(t(microRNA_raw)[ID_intersect,],
+biomarkers_raw[ID_intersect,],
+Metabolites_raw[ID_intersect,])
+
+
+##########################################################################################################################################
+# Merge tables
+joint_molecules_logMeanCenter_work<-merge(data.frame(joint_molecules,ID=rownames(joint_molecules)),data.frame(CAD_Patients_Age,ID=rownames(CAD_Patients_Age)),by="ID")
+
+# Set rownames(CAD_Biomarkers_work)
+rownames(joint_molecules_logMeanCenter_work)<-as.vector(joint_molecules_logMeanCenter_work$ID)
+
+# Remove col ID
+joint_molecules_logMeanCenter_work<-joint_molecules_logMeanCenter_work[,-c(1)]
+
+colnames(joint_molecules_logMeanCenter_work)[1:dim(joint_molecules)[2]]<-colnames(joint_molecules)
+
+
+saveRDS(joint_molecules_logMeanCenter_work, file = paste(outputfolder,paste("joint_molecules_raw","",".rds",sep=""),sep="/"))
+
+##########################################################################################################################################
+# Percentage of complete data
+complete_data_per_variable<-data.frame(Biomarker=c(),completeness=c())
+
+# For each column, convert to numeric
+for (col_bio in colnames(CAD_Biomarkers))
+{		
+	# Percentage of complete data
+	complete_data_per_variable<-rbind(complete_data_per_variable,data.frame(Biomarker=c(col_bio),completeness=c(sum(!is.na(CAD_Biomarkers[,col_bio]))/length(CAD_Biomarkers[,col_bio])*100)))
+}
+rownames(complete_data_per_variable)<-complete_data_per_variable$Biomarker	
+
+# Sort completness table
+complete_data_per_variable<-complete_data_per_variable[order(complete_data_per_variable$completeness),]
+##########################################################################################################################################
+# For each 28 biomarkers: Gaussian Distribution
+# Outliers (IQR = 3)
+# PCA
+# Take patients ids
+patients_ids<-rownames(as.vector((CAD_Patients_Age[which(CAD_Patients_Age$Ischemia=="Yes"),])))
+# Take control ids
+control_ids<-rownames(as.vector((CAD_Patients_Age[which(CAD_Patients_Age$Ischemia=="No"),])))
+##########################################################################################################################################*
+# For each protein
+# t.test
+# Scale protein levels
+# Take expression levels
+df_result_t<-data.frame(Biomarker=c(),p.value=c())
+
+# Make copy of biomarker data
+CAD_Patients_Age<-load_data_Patients()
+
+CAD_Biomarkers<-load_data_Biomarkers_normalized_filtered()
+CAD_Biomarkers_log<-load_data_Biomarkers_lognormalized_filtered()
+##########################################################################################################################################
+library("dendextend")
+library("viridis")
+# Load biomarkers dataset
+# Use only data for which the all datasets are present  as.vector(CAD_Patients_Age$ID_PATIENT)
+# Plot patients vs. biomarkers
+# Try clustering/non-clustering (ordering Ischemia/Sex)
+# Number of biomarkers
+# Process MRI data
+#Load patient data
+
+#Load patient data
+CAD_Metabolites_logNormNoOutliers_batch_removal<-load_data_Metabolites_noOutilers_batch_removal_logNorm()
+
+#Load patient data
+CAD_Metabolites_logNormmeanCenteredNoOutliers<-load_data_Metabolites_noOutilers_logNorm_meanCentered()
+
+#Load patient data
+CAD_Metabolites_logNorm_NoOutliers<-load_data_Metabolites_noOutilers_logNorm()
+
+#Load patient data
+CAD_Metabolites_raw<-load_data_Metabolites_noOutilers_raw()
+
+# Load patient data
+CAD_Patients_Age<-load_patient_data_filtered()
+###################
+###################
+CAD_Metabolites_log<-CAD_Metabolites_logNorm_NoOutliers
+CAD_Metabolites<-CAD_Metabolites_logNormmeanCenteredNoOutliers
+##########################################################################################################################################
+library("dendextend")
+library("viridis")
+# Load biomarkers dataset
+# Use only data for which the all datasets are present  as.vector(CAD_Patients_Age$ID_PATIENT)
+# Plot patients vs. biomarkers
+# Try clustering/non-clustering (ordering Ischemia/Sex)
+# Number of biomarkers
+# Process MRI data
+
+#Load patient data
+CAD_microRNA_logNormmeanCenteredNoOutliers<-load_data_microRNA_noOutilers_logNorm_meanCentered()
+
+#Load patient data
+CAD_microRNA_logNorm_NoOutliers<-load_data_microRNA_noOutilers_logNorm()
+
+#Load patient data
+#Load patient data
+CAD_microRNA_logNormmeanCenteredNoOutliers<-t(CAD_microRNA_logNormmeanCenteredNoOutliers)
+
+#Load patient data
+CAD_microRNA_logNorm_NoOutliers<-t(CAD_microRNA_logNorm_NoOutliers)
+
+# Load patient data
+CAD_Patients_Age<-load_patient_data_filtered()
+
+
+###################
+CAD_microRNAs_log<-CAD_microRNA_logNorm_NoOutliers
+CAD_microRNAs<-CAD_microRNA_logNormmeanCenteredNoOutliers
+
+##########################################################################################################################################
+# DE molecules
+DE_molecules_biomarker<-colnames(CAD_Biomarkers)
+DE_molecules_microRNA<-as.vector(read.xlsx(paste(outputfolder,"/DE_microRNA.xlsx",sep=""),startRow = 1, sheetIndex=1)[,1])
+DE_molecules_metabolites<-gsub("`","",as.vector(read.xlsx(paste(outputfolder,"/DE_Metabolites.xlsx",sep=""),startRow = 1, sheetIndex=1)[,1]))
+
+# Intersecton of patients
+ID_intersect<-intersect(intersect(rownames(CAD_Biomarkers_log),rownames(CAD_Metabolites_log)),rownames(CAD_microRNAs_log))
+
+# Take the log expression of each molecule and put it together
+joint_molecules<-cbind(CAD_microRNAs[ID_intersect,],
+CAD_Biomarkers[ID_intersect,],
+CAD_Metabolites[ID_intersect,])
+
+# Take the log expression of each molecule and put it together
+joint_molecules_log<-cbind(CAD_microRNAs_log[ID_intersect,],
+CAD_Biomarkers_log[ID_intersect,],
+CAD_Metabolites_log[ID_intersect,])
+
+# Start log mean centered table
+joint_molecules_logMeanCenter<-joint_molecules_log
+
+# Perform mean-centering
+# Center for each variable 
+for (molecule in colnames(joint_molecules))
+{
+	# mean centering
+	joint_molecules_logMeanCenter[,molecule]<-(joint_molecules_log[,molecule]-mean(joint_molecules_log[,molecule]))/sd(joint_molecules_log[,molecule])
+}
+# Here, save multi-block1
+saveRDS(joint_molecules_logMeanCenter, file = paste(outputfolder,paste("joint_molecules_multiblock1","",".rds",sep=""),sep="/"))
+
+##########################################################################################################################################
+# Merge tables
+joint_molecules_logMeanCenter_work<-merge(data.frame(joint_molecules_logMeanCenter,ID=rownames(joint_molecules_logMeanCenter)),data.frame(CAD_Patients_Age,ID=rownames(CAD_Patients_Age)),by="ID")
+
+# Set rownames(CAD_Biomarkers_work)
+rownames(joint_molecules_logMeanCenter_work)<-as.vector(joint_molecules_logMeanCenter_work$ID)
+
+# Remove col ID
+joint_molecules_logMeanCenter_work<-joint_molecules_logMeanCenter_work[,-c(1)]
+
+colnames(joint_molecules_logMeanCenter_work)[1:dim(joint_molecules_logMeanCenter)[2]]<-colnames(joint_molecules_logMeanCenter)
+
+# Here, save multi-block1
+saveRDS(joint_molecules_logMeanCenter_work, file = paste(outputfolder,paste("joint_molecules_logMeanCenter_multiblock1_work","",".rds",sep=""),sep="/"))
+
+##########################################################################################################################################
+
+# Take the log expression of each molecule and put it together
+joint_molecules<-cbind(CAD_microRNAs[ID_intersect,DE_molecules_microRNA],
+CAD_Biomarkers[ID_intersect,DE_molecules_biomarker],
+CAD_Metabolites[ID_intersect,DE_molecules_metabolites])
+
+# Take the log expression of each molecule and put it together
+joint_molecules_log<-cbind(CAD_microRNAs_log[ID_intersect,DE_molecules_microRNA],
+CAD_Biomarkers_log[ID_intersect,DE_molecules_biomarker],
+CAD_Metabolites_log[ID_intersect,DE_molecules_metabolites])
+
+# Start log mean centered table
+joint_molecules_logMeanCenter<-joint_molecules_log
+
+# Perform mean-centering
+# Center for each variable 
+for (molecule in colnames(joint_molecules))
+{
+	# mean centering
+	joint_molecules_logMeanCenter[,molecule]<-(joint_molecules_log[,molecule]-mean(joint_molecules_log[,molecule]))/sd(joint_molecules_log[,molecule])
+}
+# Save table
+saveRDS(joint_molecules_logMeanCenter, file = paste(outputfolder,paste("joint_molecules_multiblock2","",".rds",sep=""),sep="/"))
+
+##########################################################################################################################################
+# Merge tables
+joint_molecules_logMeanCenter_work<-merge(data.frame(joint_molecules_logMeanCenter,ID=rownames(joint_molecules_logMeanCenter)),data.frame(CAD_Patients_Age,ID=rownames(CAD_Patients_Age)),by="ID")
+
+# Set rownames(CAD_Biomarkers_work)
+rownames(joint_molecules_logMeanCenter_work)<-as.vector(joint_molecules_logMeanCenter_work$ID)
+
+# Remove col ID
+joint_molecules_logMeanCenter_work<-joint_molecules_logMeanCenter_work[,-c(1)]
+
+colnames(joint_molecules_logMeanCenter_work)[1:dim(joint_molecules_logMeanCenter)[2]]<-colnames(joint_molecules_logMeanCenter)
+
+# Here, save multi-block1
+saveRDS(joint_molecules_logMeanCenter_work, file = paste(outputfolder,paste("joint_molecules_logMeanCenter_multiblock2_work","",".rds",sep=""),sep="/"))
+
+##########################################################################################################################################
+
+##########################################################################################################################################
+# Merge tables
+joint_molecules_logMeanCenter_work<-merge(data.frame(joint_molecules_logMeanCenter,ID=rownames(joint_molecules_logMeanCenter)),data.frame(CAD_Patients_Age,ID=rownames(CAD_Patients_Age)),by="ID")
+
+# Set rownames(CAD_Biomarkers_work)
+rownames(joint_molecules_logMeanCenter_work)<-as.vector(joint_molecules_logMeanCenter_work$ID)
+
+# Remove col ID
+joint_molecules_logMeanCenter_work<-joint_molecules_logMeanCenter_work[,-c(1)]
+
+colnames(joint_molecules_logMeanCenter_work)[1:dim(joint_molecules_logMeanCenter)[2]]<-colnames(joint_molecules_logMeanCenter)
+
+# Here, save multi-block1
+#saveRDS(joint_molecules_logMeanCenter_work, file = paste(outputfolder,paste("joint_molecules_logMeanCenter_multiblock1_work","",".rds",sep=""),sep="/"))
+
+joint_molecules_log_work<-merge(data.frame(joint_molecules,ID=rownames(joint_molecules)),data.frame(CAD_Patients_Age,ID=rownames(CAD_Patients_Age)),by="ID")
+
+# Set rownames(CAD_Biomarkers_work)
+rownames(joint_molecules_log_work)<-as.vector(joint_molecules_log_work$ID)
+
+# Remove col ID
+joint_molecules_log_work<-joint_molecules_log_work[,-c(1)]
+
+colnames(joint_molecules_log_work)[1:dim(joint_molecules)[2]]<-colnames(joint_molecules)
+
+##########################################################################################################################################
+# Take the cluster_cols
+create_OptimaNumberMoleculeClusters(exp_dataset=joint_molecules_logMeanCenter,work=joint_molecules_logMeanCenter_work,outputfolder=outputfolder)
+##########################################################################################################################################
+# Quick start in mixOmics
+library("mixOmics")
+
+# Set data
+Y1<-CAD_Patients_Age[rownames(joint_molecules_logMeanCenter),"Ischemia"]
+Y2<-CAD_Patients_Age[rownames(joint_molecules_logMeanCenter),"DMT2_known"]
+Y3<-paste(gsub("No","NonIschemic",gsub("Yes","Ischemic",CAD_Patients_Age[rownames(joint_molecules_logMeanCenter),"Ischemia"])),gsub("No","NonDiabetic",gsub("Yes","Diabetic",CAD_Patients_Age[rownames(joint_molecules_logMeanCenter),"DMT2_known"])),sep="-")
+
+##########################################################################################################################################
+# First 
+# Phenotype blocks - combine all the phenoytpe variables in a single Phenotype variable
+# Y1<-  block with ischemia
+# Xs <- block with sex+Smoking+DMT2
+# Set Sex and Smoking
+
+# Set Sex and Smoking
+CAD_Patients_Age2<-data.frame(Sex=as.numeric(CAD_Patients_Age$Sex)-1,Smoking_known=as.numeric(CAD_Patients_Age$Smoking_known)-1,DMT2_known=as.numeric(CAD_Patients_Age$DMT2_known)-1)
+
+# Set rownames
+rownames(CAD_Patients_Age2)<-rownames(CAD_Patients_Age)
+
+# Set Y
+Y<-Y1
+##########################################################################################################################################
+# Plot ROC analysis
+slected_variables=colnames(joint_molecules_logMeanCenter)
+rownames(ha_molecules)<-ha_molecules$Molecules
+slected_variables=c("hsTroponinI","Pro_BNP")
+
+
+run_roc_joint(expression_table_batchRemoved=joint_molecules_logMeanCenter,CAD_molecule_work=joint_molecules_logMeanCenter_work,ha_molecules=ha_molecules,ddsPLS=slected_variables,outputfolder=outputfolder)
+
+
+
+
+##########################################################################################################################################
+# Create list to keep
+list.keepX <- list(microRNA = c(5,5), biomarker = c(5,5), metabolite = c(5,5),Info=c(2,2))
+##########################################################################################################################################
+# set up a full design where every block is connected
+# could also consider other weights, see our mixOmics manuscript
+design = matrix(0, ncol = length(X), nrow = length(X),
+                dimnames = list(names(X), names(X)))
+				
+# Create test list of keepX
+list.testX <- list(microRNA = c(1:10), biomarker = c(1:18), metabolite = c(1:48),Info=c(1:3))				
+
+			
+# Cross validation results
+tune.block.splsda <- tune.block.splsda(X=X, Y=Y1, ncomp = 1, # we suggest to push ncomp a bit more, e.g. 4
+                                 folds = 10,  progressBar = TRUE,
+                                 test.keepX = list.testX,
+                                 nrepeat = 1,# we suggest nrepeat = 50
+								 design=design)  # To check the error rate with  100folds and 1 replicate
+			
+# Optimized parameters			
+list.keepX<-tune.block.splsda$choice.keepX
+
+##########################################################################################################################################
+# Compute results
+MyResult.splsda <- block.splsda(X, Y1,design=design,scale = FALSE,keepX=list.keepX)
+##########################################################################################################################################
+##########################################################################################################################################
+library("ggpubr")
+
+# Create the plot
+print(paste(outputfolder,paste("Diablo","joint_","splsda.png",sep=""),sep="/"))
+Cairo(width = 10, height = 10, units = 'in', res = 600, file=paste(outputfolder,paste("Diablo","joint_","splsda.png",sep=""),sep="/"), type="png", bg="white")		
+	circosPlot(MyResult.splsda, cutoff=0.6), size.labels = 1, size.variables = 1,color.Y=c(colorblind_pal()(8)[c(1,2)]),color.blocks=c(colorblind_pal()(8)[c(2,3,4,6)]),color.cor=c(colorblind_pal()(8)[c(6,7)]))
+dev.off()
+
+# Create the plot
+print(paste(outputfolder,paste("Loadings","joint_","splsda.png",sep=""),sep="/"))
+Cairo(width = 12.0, height = 7.0, units = 'in', res = 600, file=paste(outputfolder,paste("Loadings","joint_","splsda1.png",sep=""),sep="/"), type="png", bg="white")		
+	plotLoadings(MyResult.splsda, comp = 1, contrib = "max",color.Y=c(colorblind_pal()(8)[c(1,2)]),color.blocks=c(colorblind_pal()(8)[c(3,4,5)]),color.cor=c(colorblind_pal()(8)[c(6,7)]))
+dev.off()
+
+
+# Create the plot
+print(paste(outputfolder,paste("Cor_comp1_2","joint_","splsda2.png",sep=""),sep="/"))
+Cairo(width = 7.0, height = 7.0, units = 'in', res = 600, file=paste(outputfolder,paste("Cor_comp1_2","joint_","splsda.png",sep=""),sep="/"), type="png", bg="white")			
+	plotDiablo(MyResult.splsda, ncomp = 1)
+dev.off()
+
+##########################################################################################################################################
+# Selected variables comp1
+comp1_variables<-c(selectVar(MyResult.splsda, comp = c(1), block = c(1,2,3))$microRNA$name,
+selectVar(MyResult.splsda, comp = c(1), block = c(1,2,3,4))$metabolite$name,
+selectVar(MyResult.splsda, comp = c(1), block = c(1,2,3,4))$biomarker$name,
+selectVar(MyResult.splsda, comp = c(1), block = c(1,2,3,4))$Info$name)
+
+
+# Selected variables comp2
+comp2_variables<-c(selectVar(MyResult.splsda, comp = c(2), block = c(1,2,3))$microRNA$name,
+selectVar(MyResult.splsda, comp = c(2), block = c(1,2,3))$metabolite$name,
+selectVar(MyResult.splsda, comp = c(2), block = c(1,2,3))$biomarker$name,
+selectVar(MyResult.splsda, comp = c(2), block = c(1,2,3,4))$Info$name)
+
+# Joint
+slected_variables_comp12<-unique(c(comp1_variables,comp2_variables))
+
+# Select variables
+varInfo<-unique(c(selectVar(MyResult.splsda, comp = c(1), block = c(1,2,3,4))$Info$name,
+selectVar(MyResult.splsda, comp = c(2), block = c(1,2,3,4))$Info$name))
+
+#############################################################################################################
+# Annotation for molecules
+ha_molecules<-rbind(data.frame(Molecules=unique(colnames(CAD_microRNAs)),Block="microRNA"),		
+		data.frame(Molecules=unique(colnames(CAD_Biomarkers)),Block="Biomarker"),	
+		data.frame(Molecules=unique(colnames(CAD_Metabolites)),Block="Metabolite"),
+		data.frame(Molecules=varInfo,Block="Info"))
+		
+	
+# Make copy
+ha_molecules2<-data.frame(ha_molecules$Block)
+
+# Set rownames		
+rownames(ha_molecules2)<-ha_molecules$Molecules
+
+# Replace
+ha_molecules<-ha_molecules2
+
+# Take the log expression of each molecule and put it together
+joint_dataset<-cbind(CAD_microRNAs[ID_intersect,],CAD_Biomarkers[ID_intersect,],CAD_Metabolites[ID_intersect,],CAD_Patients_Age2[ID_intersect,])
+
+# Select molecules
+joint_dataset<-joint_dataset[,slected_variables_comp12]
+
+# Preselect molecules
+ha_molecules<-data.frame(Block=ha_molecules[colnames(joint_dataset),])
+
+# Set rownames()
+rownames(ha_molecules)<-colnames(joint_dataset)
+
+# Set file name
+filename=paste(outputfolder,paste("Heatmap_","comp12","plot.png",sep=""),sep="/")
+
+# Set tile
+title="block analysis - splsda components 1 and 2 "
+
+# Create plot
+plot_heatmap(joint_dataset=joint_dataset,ha_molecules=ha_molecules,CAD_Patients_Age=CAD_Patients_Age,filename=filename,title=title)
+
+# Save plot
+Cairo(width = 25.0, height = 25.0, units = 'in', res = 600, file=paste(outputfolder,paste("Corrplot","joint_","splsda.png",sep=""),sep="/"), type="png", bg="white")		
+	corrplot(cor(joint_dataset, method = "pearson", use = "complete.obs"), method = "number",order = "hclust",tl.col = "black",cl.cex=1, col = c("black","darkgrey","#1A1110"), number.cex = 1.3,tl.cex =2) # Display the correlation coefficient
+dev.off()
+
+#############################################################################################################
+# Calculate ROC
+# Annotation for molecules
+ha_molecules<-rbind(data.frame(Molecules=unique(colnames(CAD_microRNAs)),Block="microRNA"),		
+		data.frame(Molecules=unique(colnames(CAD_Biomarkers)),Block="Biomarker"),	
+		data.frame(Molecules=unique(colnames(CAD_Metabolites)),Block="Metabolite"),
+		data.frame(Molecules=c("Sex","DMT2_known","Smoking_known"),Block="Info"))
+		
+	
+# Make copy
+ha_molecules2<-data.frame(ha_molecules$Block)
+
+# Set rownames		
+rownames(ha_molecules2)<-ha_molecules$Molecules
+
+# Replace
+ha_molecules<-ha_molecules2
+
+
+# Calculate ROC
+# Selected variables
+slected_variables<-slected_variables_comp12
+
+# Take the log expression of each molecule and put it together
+joint_dataset<-cbind(CAD_microRNAs[ID_intersect,DE_molecules_microRNA],CAD_Biomarkers[ID_intersect,DE_molecules_biomarker],CAD_Metabolites[ID_intersect,DE_molecules_metabolites],CAD_Patients_Age[ID_intersect,c("Sex","Age","DMT2_known","Smoking_known")])
+
+# Select molecules
+#joint_dataset<-joint_dataset[,slected_variables_comp12]
+
+
+# Merge tables
+#CAD_molecule_work<-merge(data.frame(joint_molecules_logMeanCenter,ID=rownames(joint_molecules_logMeanCenter)),data.frame(CAD_Patients_Age2,ID=rownames(CAD_Patients_Age2)),by="ID")
+CAD_molecule_work<-merge(data.frame(cbind(X[[1]],X[[2]],X[[3]]),ID=rownames(cbind(X[[1]],X[[2]],X[[3]]))),data.frame(CAD_Patients_Age2,ID=rownames(CAD_Patients_Age2)),by="ID")
+
+# Set rownames(CAD_Biomarkers_work)
+rownames(CAD_molecule_work)<-as.vector(CAD_molecule_work$ID)
+
+# Remove col ID
+CAD_molecule_work<-CAD_molecule_work[,-c(1)]
+
+# Set colnames
+colnames(CAD_molecule_work)[1:dim(data.frame(cbind(X[[1]],X[[2]],X[[3]])))[2]]<-c(colnames(X[[1]]),colnames(X[[2]]),colnames(X[[3]]))
+
+# DE molecules
+variables<-c(DE_molecules_biomarker,DE_molecules_microRNA,DE_molecules_metabolites,c("Ischemia","Sex","Smoking_known","DMT2_known"))
+
+# Set ischemia
+CAD_molecule_work$Ischemia<-CAD_Patients_Age[rownames(CAD_molecule_work),"Ischemia"]
+CAD_molecule_work$Sex<-CAD_Patients_Age[rownames(CAD_molecule_work),"Sex"]
+CAD_molecule_work$Smoking_known<-CAD_Patients_Age[rownames(CAD_molecule_work),"Smoking_known"]
+CAD_molecule_work$DMT2_known<-CAD_Patients_Age[rownames(CAD_molecule_work),"DMT2_known"]
+
+
+ddsPLS=colnames(joint_molecules)
+
+# Plot ROC analysis
+run_roc_joint(expression_table_batchRemoved=joint_dataset,CAD_molecule_work=CAD_molecule_work,ha_molecules=ha_molecules,ddsPLS=slected_variables,outputfolder=outputfolder)
+
+
+
+
+
+
+
+
+
+##########################################################################################################################################
+# First 
+# Phenotype blocks - combine all the phenoytpe variables in a single Phenotype variable
+# Y1<-  block with ischemia
+# Xs <- block with sex+Smoking+DMT2
+# Set Sex and Smoking
+
+# Set Sex and Smoking
+CAD_Patients_Age2<-data.frame(Sex=as.numeric(CAD_Patients_Age$Sex)-1,Smoking_known=as.numeric(CAD_Patients_Age$Smoking_known)-1,DMT2_known=as.numeric(CAD_Patients_Age$DMT2_known)-1)
+
+# Set rownames
+rownames(CAD_Patients_Age2)<-rownames(CAD_Patients_Age)
+
+# Set Y
+Y<-Y1
+
+# Take the log expression of each molecule and put it together
+X<-list(microRNA=CAD_microRNAs_log[ID_intersect,DE_molecules_microRNA],
+biomarker=CAD_Biomarkers_log[ID_intersect,DE_molecules_biomarker],
+metabolite=CAD_Metabolites_log[ID_intersect,DE_molecules_metabolites],
+Info=CAD_Patients_Age2[ID_intersect,])
+
+# Take the log expression of each molecule and put it together
+#X<-list(microRNA=CAD_microRNAs_log[ID_intersect,],
+#biomarker=CAD_Biomarkers_log[ID_intersect,],
+#metabolite=CAD_Metabolites_log[ID_intersect,],
+#Info=CAD_Patients_Age2[ID_intersect,])
+
+## Save R objects# Save R objects
+#saveRDS(X, file = paste(outputfolder,paste("Xs","",".rds",sep=""),sep="/"))
+#saveRDS(Y, file = paste(outputfolder,paste("Y","",".rds",sep=""),sep="/"))
+
+#X<-readRDS(file = "C:/Users/fv2/Documents/Xs.rds")
+#Y<-readRDS(file = "C:/Users/fv2/Documents/Y.rds")
+# Save R objects# Save R objects
+#X<-readRDS(file = "C:/Users/fv2/Documents/Xs.rds")
+#Y<-readRDS(file = "C:/Users/fv2/Documents/Y.rds")
+
+##########################################################################################################################################
+library("ddsPLS")	
+library(doParallel)
+# Logit vs.lds then check the error rate
+# Try L0s = c(1:total_number_of_molecues)
+n_molecules<-length(colnames(X[[1]]))+length(colnames(X[[2]]))+length(colnames(X[[3]]))+length(colnames(X[[4]]))
+# Organize the error rate for each of the models
+# Number of groups to descriminate-1
+ncomp<-nlevels(as.factor(Y))-1
+
+# Take patients ids
+patients_ids<-rownames(as.vector((CAD_Patients_Age[which(CAD_Patients_Age$Ischemia=="Yes"),])))
+# Take control ids
+control_ids<-rownames(as.vector((CAD_Patients_Age[which(CAD_Patients_Age$Ischemia=="No"),])))
+
+##########################################################################################################################################
+# Save R objects# Save R objects
+#saveRDS(df_cv_results, file = paste(outputfolder,paste("df_cv_results","",".rds",sep=""),sep="/"))
+#saveRDS(df_selection_results, file = paste(outputfolder,paste("df_selection_results","",".rds",sep=""),sep="/"))
+
+#df_cv_results<-readRDS(file = paste(outputfolder,paste("df_cv_results","",".rds",sep=""),sep="/"))
+#df_selection_results<-readRDS(file = paste(outputfolder,paste("df_selection_results","",".rds",sep=""),sep="/"))
+
+
+#saveRDS(bootstrap_X, file = paste(outputfolder,paste("bootstrap_X","",".rds",sep=""),sep="/"))
+#saveRDS(bootstrap_Y, file = paste(outputfolder,paste("bootstrap_Y","",".rds",sep=""),sep="/"))
+
+# Save R objects# Save R objects
+#df_cv_results<-readRDS(file = "C:/Users/fv2/Documents/df_cv_results.rds")
+#df_selection_results<-readRDS(file = "C:/Users/fv2/Documents/df_selection_results.rds")
+
+
+#bootstrap_X<-readRDS(file = "C:/Users/fv2/Documents/bootstrap_X.rds")
+#bootstrap_Y<-readRDS(file = "C:/Users/fv2/Documents/bootstrap_Y.rds")
+#DE_molecules_microRNA<-colnames(CAD_microRNAs_log)
+#DE_molecules_biomarker<-colnames(CAD_Biomarkers_log)
+#DE_molecules_metabolites<-colnames(CAD_Metabolites_log)
+
+##########################################################################################################################################
+# Set output
+parellellfolder="/home/flealvalentim/data/PREMED-CAD/parallel/"
+
+# Create folder
+dir.create(parellellfolder)
+##########################################################################################################################################
+
+# First save all files
+# Save resutls in lists
+bootstrap_results<-list()
+bootstrap_results_selection<-list()
+bootstrap_X<-list()
+bootstrap_Y<-list()
+
+# Repeat bootstrap
+for (boostraprs in 1:100)
+{
+	print(boostraprs)
+	
+	# Select 50 samples from control and 50 samples from ischemia
+	ID_intersect_boot<-c(sample(intersect(patients_ids,ID_intersect), length(intersect(patients_ids,ID_intersect)), replace = FALSE, prob = NULL),
+	sample(intersect(control_ids,ID_intersect), length(intersect(patients_ids,ID_intersect)), replace = FALSE, prob = NULL))
+	
+	# Number of variables to be tested 1:50
+	# Take the log expression of each molecule and put it together
+	X_boot<-list(microRNA=CAD_microRNAs_log[ID_intersect_boot,DE_molecules_microRNA],
+	biomarker=CAD_Biomarkers_log[ID_intersect_boot,DE_molecules_biomarker],
+	metabolite=CAD_Metabolites_log[ID_intersect_boot,DE_molecules_metabolites],
+	Info=CAD_Patients_Age2[ID_intersect_boot,])
+	
+	# Set phenotype
+	Y_boot<-CAD_Patients_Age[ID_intersect_boot,"Ischemia"]
+	
+	# Save X list
+	bootstrap_X[[boostraprs]]<-X_boot
+	
+	# Save Y list
+	bootstrap_Y[[boostraprs]]<-Y_boot
+	
+	# Save files
+	saveRDS(X_boot, file = paste(parellellfolder,paste("bootstrap_X_",boostraprs,".rds",sep=""),sep="/"))
+	saveRDS(Y_boot, file = paste(parellellfolder,paste("bootstrap_Y_",boostraprs,".rds",sep=""),sep="/"))
+	
+	# Cross validation # Increase number of cv
+	#mddsPLS_model_perf<-perf_mddsPLS(Xs=X,Y=as.factor(Y1),R=1, L0s = c(3:30),mode = "lda", plot_result = T, legend_label = T)
+	#mddsPLS_model_perf_1<-perf_mddsPLS(Xs=X,Y=as.factor(Y),R=ncomp, L0s = c(1:n_molecules),mode = "logit",NCORES=16,kfolds=10)
+	#mddsPLS_model_perf_1<-perf_mddsPLS(Xs=X_boot,Y=as.factor(bootstrap_Y[[boostraprs]]),R=ncomp, L0s = c(1:(n_molecules/1)),mode = "logit",NCORES=40,plot_result = F, legend_label = F)			
+		
+	# Run the block-analysis cross-validation
+	#bootstrap_results[[boostraprs]]<-mddsPLS_model_perf_1	
+}	
+##########################################################################################################################################
+# First save all files
+# Save resutls in lists
+bootstrap_results<-list()
+bootstrap_X<-list()
+bootstrap_Y<-list()
+
+# Set output
+parellellfolder="/home/flealvalentim/data/PREMED-CAD/parallel/"
+
+# Repeat bootstrap
+for (boostraprs in 1:100)
+{
+	print(boostraprs)
+		
+	
+	# Save files
+	mddsPLS_model_perf_1<-readRDS(paste(parellellfolder,paste("mddsPLS_model_perf_",boostraprs,".rds",sep=""),sep="/"))
+		
+	# Cross validation # Increase number of cv
+	#mddsPLS_model_perf<-perf_mddsPLS(Xs=X,Y=as.factor(Y1),R=1, L0s = c(3:30),mode = "lda", plot_result = T, legend_label = T)
+	#mddsPLS_model_perf_1<-perf_mddsPLS(Xs=X,Y=as.factor(Y),R=ncomp, L0s = c(1:n_molecules),mode = "logit",NCORES=16,kfolds=10)
+	#mddsPLS_model_perf_1<-perf_mddsPLS(Xs=X_boot,Y=as.factor(bootstrap_Y[[boostraprs]]),R=ncomp, L0s = c(1:(n_molecules/1)),mode = "logit",NCORES=40,plot_result = F, legend_label = F)			
+	
+	# Save files	
+	bootstrap_X[[boostraprs]]<-readRDS(file = paste(parellellfolder,paste("bootstrap_X_",boostraprs,".rds",sep=""),sep="/"))
+	bootstrap_Y[[boostraprs]]<-readRDS(file = paste(parellellfolder,paste("bootstrap_Y_",boostraprs,".rds",sep=""),sep="/"))	
+		
+	# Run the block-analysis cross-validation
+	bootstrap_results[[boostraprs]]<-mddsPLS_model_perf_1	
+}	
+
+# Stopped here - Monday
+bootstrap_results_selection<-list()
+# Repeat bootstrap
+for (boostraprs in 1:100)
+{
+	print(boostraprs)
+
+	# Cross validation # Increase number of cv
+	#mddsPLS_model_perf<-perf_mddsPLS(Xs=X,Y=as.factor(Y1),R=1, L0s = c(3:30),mode = "lda", plot_result = T, legend_label = T)
+	#mddsPLS_model_perf_1<-perf_mddsPLS(Xs=X,Y=as.factor(Y),R=ncomp, L0s = c(1:n_molecules),mode = "logit",NCORES=16,kfolds=10)
+	mddsPLS_model<-mddsPLS(Xs=bootstrap_X[[boostraprs]],Y=as.factor(bootstrap_Y[[boostraprs]]),R=1, L0 = 33,mode = "logit")			
+		
+	# Run the block-analysis cross-validation
+	bootstrap_results_selection[[boostraprs]]<-mddsPLS_model	
+}	
+# Save files
+saveRDS(bootstrap_results_selection, file = paste(parellellfolder,paste("bootstrap_results_selection.rds",sep=""),sep="/"))
+################################################################################################
+L0s=1:79
+# Take the nunmber of patients and controls
+n_patients<-length(patients_ids)
+n_control<-length(control_ids)
+
+# Stary data.frame
+df_cv_results<-data.frame()
+
+# For each boostrapp, add results to data.frame
+for (boot_n in 1:length(bootstrap_results))
+{
+	# Take model
+	mddsPLS_model_perf_1<-bootstrap_results[[boot_n]]
+
+	# Take variables
+	goodness_control<-1-(mddsPLS_model_perf_1$ERROR$No/n_control)[L0s]
+	goodness_ischemic<-1-(mddsPLS_model_perf_1$ERROR$Yes/n_patients)[L0s]
+	L0s<-mddsPLS_model_perf_1$ERROR$L0s	
+	
+	# Take average
+	goodness_average<-(goodness_control+goodness_ischemic)/2
+
+
+	# Create data.frame
+	df_cv_results<-rbind(df_cv_results,rbind(data.frame(boot=boot_n,L0s=L0s,GoodClassRate=goodness_control,Group="Control"),
+	data.frame(boot=boot_n,L0s=L0s,GoodClassRate=goodness_ischemic,Group="Ischemic"),
+	data.frame(boot=boot_n,L0s=L0s,GoodClassRate=goodness_average,Group="AvgPrecision")))
+}
+# Filter out average
+#df_cv_results<-df_cv_results[df_cv_results$Group!="AvgPrecision",]
+
+#ggplot(data=df_cv_results, aes(x=L0s, y=GoodClassRate, group=Group,color=Group)) + geom_line(size=2)+ ggtitle("Good classification rate across L0s for bootstrapped samples")+ theme_bw() + xlab("L0s") + ylab("Good classification rate")+ scale_y_continuous(breaks=c(seq(0,1,0.05)))+ scale_x_continuous(breaks=seq(1,max(L0s),2))+ scale_color_manual(values=c(Control="black",Ischemic="#E69F00",AvgPrecision="Grey"))
+plot_cv_results<-ggplot(data=df_cv_results, aes(x=L0s, y=GoodClassRate, group=Group,color=Group)) + geom_point(size=1.5)+ ggtitle("Good classification rate across L0s for bootstrapped samples")+ theme_bw() + xlab("L0s") + ylab("Good classification rate")+ scale_y_continuous(breaks=c(seq(0,1,0.05)))+ scale_x_continuous(breaks=seq(1,max(L0s),2))+ scale_color_manual(values=c(Control="black",Ischemic="#E69F00",AvgPrecision="grey"))+geom_smooth(method=loess,se=TRUE,span = 0.1)
+
+
+# Find loess function for Control
+loess_control <- loess(GoodClassRate ~ L0s, data=df_cv_results[which(df_cv_results$Group=="Control"),c("L0s","GoodClassRate")])
+loess_Ischemic <- loess(GoodClassRate ~ L0s, data=df_cv_results[which(df_cv_results$Group=="Ischemic"),c("L0s","GoodClassRate")])
+loess_AvgPrecision <- loess(GoodClassRate ~ L0s, data=df_cv_results[which(df_cv_results$Group=="AvgPrecision"),c("L0s","GoodClassRate")])
+
+# Find loess function for Control
+lm_control <- lm(GoodClassRate ~ L0s, data=df_cv_results[which(df_cv_results$Group=="Control"),c("L0s","GoodClassRate")])
+lm_Ischemic <- lm(GoodClassRate ~ L0s, data=df_cv_results[which(df_cv_results$Group=="Ischemic"),c("L0s","GoodClassRate")])
+lm_AvgPrecision <- lm(GoodClassRate ~ L0s, data=df_cv_results[which(df_cv_results$Group=="AvgPrecision"),c("L0s","GoodClassRate")])
+
+
+# Function to find inverstion
+find_inversion <- function(x) 
+{
+	# Take the sign if the first elemment
+	first_sig<-as.vector(sign(x)[1])
+	
+	# If first elemment is negative, find the next positive
+	if(first_sig=="-1")
+	{
+		# Set the invertion
+		inversion<-min(which(as.vector(sign(x)[2:length(x)]) == "1"))+1		
+	}else
+	{
+		# Set the invertion
+		inversion<-min(which(as.vector(sign(x)[2:length(x)]) == "-1"))+1		
+	
+	}
+	return(inversion)
+
+}
+
+# Add vertical lines
+#plot_cv_results<- plot_cv_results + geom_vline(xintercept = find_inversion(predict(loess_control)-predict(lm_control)), linetype="dashed", color = "black", size=1.0)
+#plot_cv_results<- plot_cv_results + geom_vline(xintercept = find_inversion(predict(loess_Ischemic)-predict(lm_Ischemic)), linetype="dashed", color = "#E69F00", size=1.0)
+#plot_cv_results<- plot_cv_results + geom_vline(xintercept = find_inversion(predict(loess_AvgPrecision)-predict(lm_AvgPrecision)), linetype="dashed", color = "grey", size=1.0)
+plot_cv_results<- plot_cv_results + geom_hline(yintercept = mean(df_cv_results[which(df_cv_results$Group=="Control"),c("GoodClassRate")]), linetype="dashed", color = "black", size=1.0)
+plot_cv_results<- plot_cv_results + geom_hline(yintercept = mean(df_cv_results[which(df_cv_results$Group=="Ischemic"),c("GoodClassRate")]), linetype="dashed", color = "#E69F00", size=1.0)
+plot_cv_results<- plot_cv_results + geom_hline(yintercept = mean(df_cv_results[which(df_cv_results$Group=="AvgPrecision"),c("GoodClassRate")]), linetype="dashed", color = "grey", size=1.0)
+
+
+plot_cv_results<- plot_cv_results + geom_vline(xintercept = find_inversion(predict(loess_control)-mean(df_cv_results[which(df_cv_results$Group=="Control"),c("GoodClassRate")])), linetype="dashed", color = "black", size=1.0)
+plot_cv_results<- plot_cv_results + geom_vline(xintercept = find_inversion(predict(loess_Ischemic)-mean(df_cv_results[which(df_cv_results$Group=="Ischemic"),c("GoodClassRate")])), linetype="dashed", color = "#E69F00", size=1.0)
+plot_cv_results<- plot_cv_results + geom_vline(xintercept = find_inversion(predict(loess_AvgPrecision)-mean(df_cv_results[which(df_cv_results$Group=="AvgPrecision"),c("GoodClassRate")])), linetype="dashed", color = "grey", size=1.0)
+
+#plot_cv_results<- plot_cv_results + geom_vline(xintercept = 43, linetype="dashed", color = "blue", size=1.0)
+
+# Save plot
+Cairo(width = 15.0, height = 7.5, units = 'in', res = 600, file=paste(outputfolder,paste("plot_cv_results.png",sep=""),sep="/"), type="png", bg="white")		
+#png(width = 15.0, height = 7.5, units = 'in', res = 600, file="C:/Users/fv2/Documents/plot_cv_results.png")			
+	plot_cv_results
+dev.off()
+##########################################################################################################################################
+# Save plot
+##########################################################################################################################################
+# Save R objects# Save R objects
+saveRDS(bootstrap_results_selection, file = "C:/Users/fv2/Documents/bootstrap_results_selection.rds")
+
+# Save R objects# Save R objects
+bootstrap_results_selection<-readRDS(file = paste(outputfolder,paste("bootstrap_results_selection","",".rds",sep=""),sep="/"))
+##########################################################################################################################################
+# Save files
+#bootstrap_results_selection<-readRDS(file = paste(parellellfolder,paste("bootstrap_results_selection.rds",sep=""),sep="/"))
+
+# Stary data.frame
+df_selection_results<-c()
+
+# For each boostrapp, add results to data.frame
+for (boot_n in 1:length(bootstrap_results_selection))
+{
+	# Take model
+	mddsPLS_model<-bootstrap_results_selection[[boot_n]]
+
+	slected_variables<-unique(c(rownames(mddsPLS_model$var_selected$microRNA),
+	rownames(mddsPLS_model$var_selected$Info),
+	rownames(mddsPLS_model$var_selected$metabolite),
+	rownames(mddsPLS_model$var_selected$biomarker)))
+	
+	# Addo to results vertor
+	df_selection_results<-c(df_selection_results,slected_variables)
+}
+# Save dataset
+df_selection_results<-data.frame(table(df_selection_results))
+
+# Rename table rows
+rownames(df_selection_results)<-df_selection_results$df_selection_results
+
+# Rename table columns
+colnames(df_selection_results)<-c("Variable","Frequency")
+
+# Re-order_table
+df_selection_results<-df_selection_results[order(-df_selection_results$Frequency),]
+
+# Re-order factor
+df_selection_results$Variable<-factor(df_selection_results$Variable,levels=as.vector(df_selection_results$Variable))
+
+# Take the 40 first results
+df_selection_results<-df_selection_results[1:33,]
+
+#df_selection_results<-df_selection_results[df_selection_results$Frequency>=10,]
+
+# Plot results
+plot_variable_frequency<-ggplot(data=df_selection_results, aes(x=Variable, y=Frequency)) + geom_bar(stat="identity", position=position_dodge())+  theme_minimal() #+  coord_flip()
+
+# Save plot
+#Cairo(width = 7.5, height = 5, units = 'in', res = 600, file=paste(outputfolder,paste("plot_variable_frequency.png",sep=""),sep="/"), type="png", bg="white")		
+Cairo(width = 6.5, height = 5, units = 'in', res = 600, file=paste(outputfolder,paste("plot_variable_frequency.png",sep=""),sep="/"), type="png", bg="white")		
+#png(width = 15.0, height = 7.5, units = 'in', res = 600, file="C:/Users/fv2/Documents/plot_variable_frequency.png")			
+	plot_variable_frequency+ggtitle("Variable selection across boostraps")+ theme_bw() + xlab("Variable") + ylab("Selection frequency")+ theme(axis.text.x = element_text(angle = 90))#+ coord_flip()
+dev.off()
+
+############################################################################################
+# Here
+# First, save excel file	
+write.xlsx(df_selection_results, file=paste(outputfolder,"/","Integrative_selection_","All_Molecules",".xlsx",sep=""), append=FALSE)
+################################################################################################
+################################################################################################
+#group2<-c("hsa-miR-10a","LDLCholesterin","SM_C26_1","PC_ae_C34_2","HDLCholesterin","Cholesterin","SM_C24_0","PC_ae_C34_3")
+group1<-read.xlsx(file=paste(outputfolder,"/","Integrative_selection_","Diablo",".xlsx",sep=""), sheetIndex=1)[,2]
+group2<-read.xlsx(file=paste(outputfolder,"/","Integrative_selection_All_Molecules",".xlsx",sep=""), sheetIndex=1)[,2]
+group3<-read.xlsx(file=paste(outputfolder,"/","Integrative_selection_stepAIC",".xlsx",sep=""), sheetIndex=1)[,1]
+group4<-c("Age","Sex","DMT2_known","hsTroponinI","HDLCholesterin","LDLCholesterin","Glucose","hsa-miR-10a","hsa-miR-183","hsa-miR-1274b","PC_aa_C32_3","PC_aa_C36_6","PC_aa_C38_4","PC_ae_C32_1","PC_ae_C32_2","PC_ae_C34_3","PC_ae_C36_1","PC_ae_C36_5","PC_ae_C40_2","lysoPC_a_C18_1","lysoPC_a_C18_2","SM_OH_C16_1","SM_C26_1")
+group5<-c("PC_ae_C34_2","PC_ae_C34_3","HDLCholesterin","Cholesterin","SM_C26_1","hsa-miR-10a","LDLCholesterin")
+
+# Top variables are here
+#top_selected_variables<-ddsPLS rownames(df_selection_results)
+top_selected_variables<-gsub("`","",as.vector(group5)) # Here for generating results
+
+# Set info df
+df_info<-data.frame(CAD_Patients_Age2[ID_intersect,intersect(colnames(CAD_Patients_Age2),top_selected_variables)])
+
+# Set colnames(df_info)
+colnames(df_info)<-intersect(colnames(CAD_Patients_Age2),top_selected_variables)
+rownames(df_info)<-ID_intersect
+
+# Take the log expression of each molecule and put it together
+X<-list(microRNA=CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),top_selected_variables)],
+biomarker=CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),top_selected_variables)],
+metabolite=CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),top_selected_variables)],
+Info=df_info)
+
+# Take the log expression of each molecule and put it together
+X<-list(microRNA=data.frame("hsa-miR-10a"=CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),top_selected_variables)]),
+biomarker=CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),top_selected_variables)],
+metabolite=CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),top_selected_variables)])
+
+
+# Take the log expression of each molecule and put it together
+#X<-list(microRNA=CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),top_selected_variables)],
+#biomarker=CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),top_selected_variables)],
+#metabolite=CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),top_selected_variables)])
+
+################################################################################################
+# Save R objects# Save R objects
+#saveRDS(X, file = paste(outputfolder,paste("Xs","",".rds",sep=""),sep="/"))
+#saveRDS(Y, file = paste(outputfolder,paste("Y","",".rds",sep=""),sep="/"))
+#X<-readRDS(file = "C:/Users/fv2/Documents/Xs.rds")
+#Y<-readRDS(file = "C:/Users/fv2/Documents/Y.rds")
+
+# Save object
+#saveRDS(X, file = paste(outputfolder,paste("X.rds",sep=""),sep="/"))
+#saveRDS(Y, file = paste(outputfolder,paste("Y.rds",sep=""),sep="/"))
+
+#X<-readRDS(file = paste("C:/Users/fv2/Documents/",paste("X.rds",sep=""),sep="/"))
+#Y<-readRDS(file = paste("C:/Users/fv2/Documents/",paste("Y.rds",sep=""),sep="/"))
+
+# Stopped here
+mddsPLS_model_class_1 <- mddsPLS(Xs=X,Y=Y1,R=1, L0 = 50,mode = "logit")
+
+# Save object
+#saveRDS(mddsPLS_model_class_1, file = "C:/Users/fv2/Documents/mddsPLS_model_class_1.rds")
+#saveRDS(mddsPLS_model_class_1, file = paste(outputfolder,paste("mddsPLS_model_class_1.rds",sep=""),sep="/"))
+mddsPLS_model_class_1<-readRDS(file = paste("C:/Users/fv2/Documents/",paste("mddsPLS_model_class_1.rds",sep=""),sep="/"))
+
+# Read-it again
+mddsPLS_model_class_1<-readRDS(file = paste(outputfolder,paste("mddsPLS_model_class_1.rds",sep=""),sep="/"))
+
+# Save
+#saveRDS(mddsPLS_model_class_1, file = paste("C:/Users/fv2/Documents/",paste("mddsPLS_model_class_1.rds",sep=""),sep="/"))
+mddsPLS_model_class_1<-readRDS(file = paste("C:/Users/fv2/Documents/",paste("mddsPLS_model_class_1.rds",sep=""),sep="/"))
+
+#mddsPLS_model_perf_1<-perf_mddsPLS(Xs=X,Y=as.factor(Y),R=ncomp, L0s = c(1:n_molecules),mode = "logit",NCORES=16,kfolds=10)
+mddsPLS_model_perf_1<-perf_mddsPLS(Xs=X,Y=as.factor(Y),R=ncomp, L0s = 1:79,mode = "logit",NCORES = 40)			
+
+# Save object
+#saveRDS(mddsPLS_model_perf_1, file = "C:/Users/fv2/Documents/mddsPLS_model_perf_1.rds")
+################################################################################################
+# Save plot
+png(file=paste("C:/Users/fv2/Documents/",paste("mddsPLSjoint_.png",sep=""),sep="/"),width = 5.0, height = 15.0, units = 'in', res = 600)
+#Cairo(width = 15.0, height = 15.0, units = 'in', res = 600, file=paste(outputfolder,paste("mddsPLS","joint_",".png",sep=""),sep="/"), type="png", bg="white")		
+Cairo(width = 5.0, height = 15.0, units = 'in', res = 600, file=paste(outputfolder,paste("mddsPLS_","joint_superComp",".png",sep=""),sep="/"), type="png", bg="white")		
+	par(oma=c(2,2,0,0))
+	plot(mddsPLS_model_class_1,plot_mean = TRUE,super = T)
+dev.off()
+
+# Save plot
+#Cairo(width = 15.0, height = 15.0, units = 'in', res = 600, file=paste(outputfolder,paste("mddsPLS","joint_",".png",sep=""),sep="/"), type="png", bg="white")		
+Cairo(width = 5.0, height = 15.0, units = 'in', res = 600, file=paste(outputfolder,paste("mddsPLS_","joint_Comp",".png",sep=""),sep="/"), type="png", bg="white")		
+	par(oma=c(2,2,0,0))
+	plot(mddsPLS_model_class_1,plot_mean = FALSE,super = F)
+dev.off()
+
+ # Save plot
+#Cairo(width = 15.0, height = 15.0, units = 'in', res = 600, file=paste(outputfolder,paste("mddsPLS","joint_",".png",sep=""),sep="/"), type="png", bg="white")		
+Cairo(width = 7.0, height = 7.0, units = 'in', res = 600, file=paste(outputfolder,paste("CV_mddsPLS_","joint",".png",sep=""),sep="/"), type="png", bg="white")		
+	plot(mddsPLS_model_perf_1,plot_mean = TRUE)
+dev.off()
+##########################################################################################################################################
+supercomponents<-list()
+##########################################################################################################################################
+
+#formula.full=paste("Ischemia ~ Sex + ",paste(colnames(CAD_Biomarkers),collapse=" + "),sep="")
+formula.full=paste("Ischemia ~ Age + Sex + coeff")	
+
+# Compute the roc curve for this results
+df_super_component<-data.frame(Ischemia=mddsPLS_model_class_1$Y_0, coeff=mddsPLS_model_class_1$mod$T_super,Age=CAD_Patients_Age[ID_intersect,"Age"],Sex=CAD_Patients_Age[ID_intersect,"Sex"])
+
+# Take the supercomponents
+supercomponents[["Signature4"]]<-df_super_component
+supercomponents[["Signature1"]]<-df_super_component
+supercomponents[["Signature2"]]<-df_super_component
+supercomponents[["Signature3"]]<-df_super_component
+##########################################################################################################################################
+# Create correlation table
+correlation_table<-cbind(data.frame(Signature1=supercomponents[["Signature1"]]$coeff),
+data.frame(Signature2=supercomponents[["Signature2"]]$coeff),
+data.frame(Signature3=supercomponents[["Signature3"]]$coeff),
+data.frame(Signature4=supercomponents[["Signature4"]]$coeff))
+
+# Set colors
+colors<-gsub("No",varColor$Ischemia[["No"]],gsub("Yes",varColor$Ischemia[["Yes"]],CAD_Patients_Age[ID_intersect,"Ischemia"]))
+
+# Set the upper panel			
+lower.panel=function(x, y, ...) 
+{
+	points(x,y, pch=19, col=colors)
+	r <- round(cor(x, y), digits=2)				
+	txt <- paste0("R = ", r)		
+	par(usr = c(0, 1, 0, 1))
+	text(0.25, 0.9, txt,cex = 1.0)			
+}	
+
+
+#Cairo(width = 15.0, height = 15.0, units = 'in', res = 600, file=paste(outputfolder,paste("mddsPLS","joint_",".png",sep=""),sep="/"), type="png", bg="white")		
+Cairo(width = 5.0, height = 5.0, units = 'in', res = 600, file=paste(outputfolder,paste("Correlation","plot",".png",sep=""),sep="/"), type="png", bg="white")		
+	pairs(correlation_table,lower.panel = lower.panel,upper.panel=NULL)
+dev.off()
+
+plotly_IMAGE(p, format = "png", out_file = paste(outputfolder,paste("Correlation","plot",".png",sep="")))
+
+
+
+Sys.setenv("plotly_username" = "flv55599318")
+Sys.setenv("plotly_api_key" = "7gZClh1D9zkCO8Rlpp6b")
+
+
+
+PC_ae_C34_2
+PC_ae_C34_3
+SM_C26_1
+
+
+##########################################################################################################################################
+# Produce glm model
+glm.full<-glm(formula=formula.full,family=binomial(link='logit'), data=df_super_component, na.action=na.omit)
+
+# Create list
+roc_molecules<-list()
+roc_names<-list()
+	
+# Save all rock curve in a list
+roc_molecules[["Molecular signature 3"]] <- roc(Ischemia~glm.full$fitted.values, data = df_super_component, plot = FALSE,ci=TRUE)	
+
+# Calculate CI
+CI<-round(as.vector(roc_molecules[["Molecular signature 3"]]$ci),3)	
+	
+# Save name of full model
+roc_names[["Molecular signature 3"]] <-paste("AUC=",CI[2]," 95%CI=",CI[1],"-",CI[3],sep="")
+
+# Create first plot
+names(roc_molecules)<-roc_names[["Molecular signature 3"]]
+C<-ggroc(roc_molecules)+ geom_line()+ theme_bw()+ ggtitle("ROC curve analysis of Molecular signature 3") + theme(legend.position = c(0.50, 0.3), legend.background = element_rect(color = NA,fill = NA, size = 1, linetype = "solid"))+theme(legend.title = element_blank())+ scale_color_manual(values = "black")
+	 
+# Corrlation plot
+print(paste(outputfolder,"/",paste("ROC_Curve_plot",sep=""),".png",sep=""))
+Cairo(width = 5, height = 5, units = 'in', res = 600, file=paste(outputfolder,"/",paste("ROC_Curve_plot",sep=""),".png",sep=""), type="png", bg="white")		
+		print(C)
+dev.off()
+
+# Create table
+superComponent_coefficients<-rbind(mddsPLS_model_class_1$var_selected[[1]],
+mddsPLS_model_class_1$var_selected[[2]],
+mddsPLS_model_class_1$var_selected[[3]],
+mddsPLS_model_class_1$var_selected[[4]])
+
+write.xlsx(superComponent_coefficients, file=paste(outputfolder,"/","SuperComponent_Coefficients","",".xlsx",sep=""),sheetName="Signature3", append=TRUE)
+##########################################################################################################################################
+library(corrplot)
+source("/home/flealvalentim/scripts/Function_plot_Circos.R")
+##########################################################################################################################################
+# Merge tables
+#CAD_molecule_work<-merge(data.frame(joint_molecules_logMeanCenter,ID=rownames(joint_molecules_logMeanCenter)),data.frame(CAD_Patients_Age2,ID=rownames(CAD_Patients_Age2)),by="ID")
+CAD_molecule_work<-data.frame(cbind(X[[1]],X[[2]],X[[3]],X[[4]]))
+
+# Set colnames
+colnames(CAD_molecule_work)<-c(colnames(X[[1]]),colnames(X[[2]]),colnames(X[[3]]),colnames(X[[4]]))
+
+# Set ischemia
+CAD_molecule_work$Ischemia<-CAD_Patients_Age[rownames(CAD_molecule_work),"Ischemia"]
+CAD_molecule_work$Sex<-CAD_Patients_Age[rownames(CAD_molecule_work),"Sex"]
+CAD_molecule_work$Smoking_known<-CAD_Patients_Age[rownames(CAD_molecule_work),"Smoking_known"]
+CAD_molecule_work$DMT2_known<-CAD_Patients_Age[rownames(CAD_molecule_work),"DMT2_known"]
+
+# Save dataset
+joint_dataset<-CAD_molecule_work
+
+# Select variables
+CAD_molecule_work<-CAD_molecule_work[,top_selected_variables]
+
+# Set ischemia
+joint_dataset$Ischemia<-as.numeric(joint_dataset$Ischemia)-1
+joint_dataset$Sex<-as.numeric(joint_dataset$Sex)-1
+joint_dataset$Smoking_known<-as.numeric(joint_dataset$Smoking_known)-1
+joint_dataset$DMT2_known<-as.numeric(joint_dataset$DMT2_known)-1
+
+# Filter dataset
+joint_dataset<-joint_dataset[,top_selected_variables]
+
+
+# Save plot
+Cairo(width = 25.0, height = 25.0, units = 'in', res = 600, file=paste(outputfolder,paste("Corrplot","joint_","splsda.png",sep=""),sep="/"), type="png", bg="white")		
+	corrplot(cor(joint_dataset[,top_selected_variables], method = "pearson", use = "complete.obs"), method = "number",order = "hclust",tl.col = "black",cl.cex=1, col = c("black","darkgrey","#1A1110"), number.cex = 1.3,tl.cex =2,addrect = 5,hclust.method="ward.D2") # Display the correlation coefficient
+dev.off()
+
+##########################################################################################################################################
+cutoff=0.7
+size.labels = 1
+size.variables = 1
+color.Y=c(colorblind_pal()(8)[c(1,2)])
+color.blocks=c(colorblind_pal()(8)[c(3,4,5)])
+color.cor=c(colorblind_pal()(8)[c(6,7)])
+
+# Heres
+# Create the plot
+print(paste(outputfolder,paste("Diablo","joint_","splsda.png",sep=""),sep="/"))
+Cairo(width = 10, height = 10, units = 'in', res = 600, file=paste(outputfolder,paste("Diablo","joint_","splsda.png",sep=""),sep="/"), type="png", bg="white")		
+	circosPlot2(mddsPLS_model_class=mddsPLS_model_class_1,CAD_Patients_Age=CAD_Patients_Age, cutoff=cutoff, size.labels = 1, size.variables = 1,color.Y=c(colorblind_pal()(8)[c(1,2)]),color.blocks=c(colorblind_pal()(8)[c(3,4,5,6)]),color.cor=c(colorblind_pal()(8)[c(6,7)]))
+dev.off()
+
+# Take the cluster_cols
+
+
+
+##########################################################################################################################################
+# Merge tables
+joint_molecules_logMeanCenter_work<-merge(data.frame(joint_dataset,ID=rownames(joint_dataset)),data.frame(CAD_Patients_Age,ID=rownames(CAD_Patients_Age)),by="ID")
+
+# Set rownames(CAD_Biomarkers_work)
+rownames(joint_molecules_logMeanCenter_work)<-as.vector(joint_molecules_logMeanCenter_work$ID)
+
+# Remove col ID
+joint_molecules_logMeanCenter_work<-joint_molecules_logMeanCenter_work[,-c(1)]
+
+colnames(joint_molecules_logMeanCenter_work)[1:dim(joint_dataset)[2]]<-colnames(joint_dataset)
+
+
+# Create 
+create_OptimaNumberMoleculeClusters(exp_dataset=joint_dataset,work=joint_molecules_logMeanCenter_work,outputfolder=outputfolder)
+##########################################################################################################################################
+#############################################################################################################
+# Annotation for molecules
+ha_molecules<-rbind(data.frame(Molecules=unique(colnames(CAD_microRNAs)),Block="microRNA"),		
+		data.frame(Molecules=unique(colnames(CAD_Biomarkers)),Block="Biomarker"),	
+		data.frame(Molecules=unique(colnames(CAD_Metabolites)),Block="Metabolite"),
+		data.frame(Molecules=rownames(mddsPLS_model_class_1$var_selected$Info),Block="Info"))
+		
+		
+	
+# Make copy
+ha_molecules2<-data.frame(ha_molecules$Block)
+
+# Set rownames		
+rownames(ha_molecules2)<-ha_molecules$Molecules
+
+# Replace
+ha_molecules<-ha_molecules2
+
+
+# Take the log expression of each molecule and put it together
+joint_dataset<-joint_molecules_logMeanCenter
+
+# Set ischemia
+joint_dataset$Ischemia<-CAD_Patients_Age[rownames(CAD_molecule_work),"Ischemia"]
+joint_dataset$Sex<-CAD_Patients_Age[rownames(CAD_molecule_work),"Sex"]
+joint_dataset$Smoking_known<-CAD_Patients_Age[rownames(CAD_molecule_work),"Smoking_known"]
+joint_dataset$DMT2_known<-CAD_Patients_Age[rownames(CAD_molecule_work),"DMT2_known"]
+
+# Filter dataset
+joint_dataset<-joint_dataset[,top_selected_variables]
+
+# Set DMT2
+joint_dataset$DMT2_known<-as.numeric(joint_dataset$DMT2_known)-1
+
+# Preselect molecules
+ha_molecules<-data.frame(Block=ha_molecules[colnames(joint_dataset),])
+
+# Set rownames()
+rownames(ha_molecules)<-colnames(joint_dataset)
+
+# Set file name
+filename=paste(outputfolder,paste("Heatmap_","comp12","plot.png",sep=""),sep="/")
+
+# Set tile
+title="ddsPLS selected variabels "
+
+joint_molecules_log_work$DMT2_known<-as.numeric(joint_molecules_log_work$DMT2)-1
+
+joint_molecules_log_work<-joint_molecules_log_work[,top_selected_variables]
+joint_dataset<-joint_molecules_log_work
+
+
+# Return optimal number os clusters
+hvlust_molecules<-hclust(as.dist(1-cor(joint_dataset, method = "pearson", use = "complete.obs")),method="ward.D2")
+hvlust_samples<-hclust(dist(joint_dataset,method = "euclidean"), method="ward.D2")
+	
+# Set number of clusters
+k.samples<-2
+k.molecules<-5#5
+
+#data_pheat_map<-t(joint_dataset)
+ha<-ha[ rownames(joint_dataset),c("Smoking_known","DMT2_known","Sex","Ischemia")]
+anno_colors<-varColor[c("Smoking_known","DMT2_known","Sex","Ischemia")]
+anno_colors[["Cluster"]]<-c("1"="#56B4E9","2"="#009E73")	
+# Calculate tree row
+tree_row<-hvlust_molecules
+tree_col<-hvlust_samples
+
+# Create col annotation
+ha_col<-data.frame(Clusters=factor(cutree(res$tree_row, k = k.molecules)[colnames(joint_dataset)]))
+
+anno_colors$Cluster=grey.colors(k.molecules)
+names(anno_colors$Cluster)<-1:k.molecules
+
+res<-pheatmap(t(joint_dataset),cluster_cols=tree_col,cluster_rows=tree_row,cutree_cols=k.samples,cutree_rows=k.molecules,main="ddsPLS selected variabels",fontsize_row = 8,annotation_row=ha_col,annotation_col=ha,annotation_colors=anno_colors,show_colnames=FALSE, scale="none",color = viridis(32))	
+ha$Cluster=factor(cutree(res$tree_col, k = k.samples)[rownames(ha)]	)
+
+
+# Create the plot
+print(paste(outputfolder,paste("Heatmap_","joint_","plot.png",sep=""),sep="/"))
+Cairo(width = 9, height = 10.0, units = 'in', res = 600, file=paste(outputfolder,paste("Heatmap_","joint_","plot.png",sep=""),sep="/"), type="png", bg="white")			
+	print(res)
+dev.off()
+
+#############################################################################################################
+# Calculate ROC
+# Annotation for molecules
+ha_molecules<-rbind(data.frame(Molecules=unique(colnames(CAD_microRNAs)),Block="microRNA"),		
+		data.frame(Molecules=unique(colnames(CAD_Biomarkers)),Block="Biomarker"),	
+		data.frame(Molecules=unique(colnames(CAD_Metabolites)),Block="Metabolite"),
+		data.frame(Molecules=c("Sex","DMT2_known","Smoking_known"),Block="Info"))
+		
+	
+# Make copy
+ha_molecules2<-data.frame(ha_molecules$Block)
+
+# Set rownames		
+rownames(ha_molecules2)<-ha_molecules$Molecules
+
+# Replace
+ha_molecules<-ha_molecules2
+
+# Select variables
+#CAD_molecule_work<-CAD_molecule_work[,top_selected_variables]
+
+
+# Set ischemia
+CAD_molecule_work$Ischemia<-CAD_Patients_Age[rownames(CAD_molecule_work),"Ischemia"]
+CAD_molecule_work$Sex<-CAD_Patients_Age[rownames(CAD_molecule_work),"Sex"]
+CAD_molecule_work$Smoking_known<-CAD_Patients_Age[rownames(CAD_molecule_work),"Smoking_known"]
+CAD_molecule_work$DMT2_known<-CAD_Patients_Age[rownames(CAD_molecule_work),"DMT2_known"]
+
+# Plot ROC analysis
+# Here
+#top_selected_variables=colnames(joint_molecules)
+run_roc_joint(expression_table_batchRemoved=CAD_molecule_work,ha_molecules=ha_molecules,ddsPLS=top_selected_variables,outputfolder=outputfolder)
+
+#############################################################################################################
+library("dendextend")
+# Create plots with average
+# First, average of patients vs. control
+
+# Take patients ids
+patients_ids<-rownames(as.vector((CAD_Patients_Age[which(CAD_Patients_Age$Ischemia=="Yes"),])))
+# Take control ids
+control_ids<-rownames(as.vector((CAD_Patients_Age[which(CAD_Patients_Age$Ischemia=="No"),])))
+
+# Take patients ids
+male_ids<-rownames(as.vector((CAD_Patients_Age[which(CAD_Patients_Age$DMT2_known=="Yes"),])))
+# Take control ids
+dtm2control_ids<-rownames(as.vector((CAD_Patients_Age[which(CAD_Patients_Age$DMT2_known=="No"),])))
+
+# Take patients ids
+male_ids<-rownames(as.vector((CAD_Patients_Age[which(CAD_Patients_Age$Sex=="M"),])))
+# Take control ids
+female_ids<-rownames(as.vector((CAD_Patients_Age[which(CAD_Patients_Age$Sex=="F"),])))
+
+# Take selected variables
+selected_variables<-rownames(df_selection_results)[!rownames(df_selection_results) %in% colnames(CAD_Patients_Age)]
+
+# Take the log expression of each molecule and put it together
+joint_log_table<-cbind(CAD_microRNAs_log[ID_intersect,intersect(DE_molecules_microRNA,top_selected_variables)],
+CAD_Biomarkers_log[ID_intersect,intersect(DE_molecules_biomarker,top_selected_variables)],
+CAD_Metabolites_log[ID_intersect,intersect(DE_molecules_metabolites,top_selected_variables)])
+
+# Here
+#selected_variables<-top_selected_variables
+
+# Return optimal number os clusters
+order_hclust<-hclust(as.dist(1-cor(joint_log_table, method = "pearson", use = "complete.obs")),method="ward.D2")$label[order.hclust(hclust(as.dist(1-cor(joint_log_table, method = "pearson", use = "complete.obs")),method="ward.D2"))]
+
+# Data.frame for ischemia
+df_ischemia_avg<-data.frame(Ischemic=colMeans(joint_log_table[intersect(patients_ids,rownames(joint_log_table)),selected_variables]),
+NonIschemic=colMeans(joint_log_table[intersect(control_ids,rownames(joint_log_table)),selected_variables]))
+
+
+df_ischemia_avg$Fc<-df_ischemia_avg$Ischemic/df_ischemia_avg$NonIschemic
+
+# Center for each variable 
+for (biom in rownames(df_ischemia_avg))
+{
+	# If fold change is positive
+	if (df_ischemia_avg[biom,"Fc"]>1)
+	{
+	
+		# mean centering
+		df_ischemia_avg[biom,"Ischemic"]<-df_ischemia_avg[biom,"Fc"]
+		df_ischemia_avg[biom,"NonIschemic"]<--df_ischemia_avg[biom,"Fc"]	
+	}else
+	{
+		# mean centering
+		df_ischemia_avg[biom,"NonIschemic"]<-df_ischemia_avg[biom,"Fc"]
+		df_ischemia_avg[biom,"Ischemic"]<--df_ischemia_avg[biom,"Fc"]
+		
+	}
+}
+
+# Filter out coluln
+df_ischemia_avg<-df_ischemia_avg[,1:2]
+
+# Print Association Results Patients All Var Info	
+print(paste(outputfolder,paste("Ischemia_model.png",sep=""),sep="/"))
+	Cairo(width = 15.0, height = 4.0, units = 'in', res = 600, file=paste(outputfolder,paste("Ischemia_model.png",sep=""),sep="/"), type="png", bg="white")		
+	corrplot(t(df_ischemia_avg[order_hclust,]), is.corr = FALSE,title=paste("Ischemia model"),mar=c(0,0,2,0),tl.col = "black",cl.cex=1, col = c("white","black"),cl.pos = "n")
+dev.off()		
+
+#############################################################################################################
+# Model for diabetes+ischemia
+# Data.frame for ischemia
+df_ischemia_dmt2_avg<-data.frame(
+IschemicDiabetic=colMeans(joint_log_table[intersect(intersect(patients_ids,male_ids),rownames(joint_log_table)),selected_variables]),
+IschemicNonDiabetic=colMeans(joint_log_table[intersect(intersect(patients_ids,dtm2control_ids),rownames(joint_log_table)),selected_variables]),
+NonIschemicDiabetic=colMeans(joint_log_table[intersect(intersect(control_ids,male_ids),rownames(joint_log_table)),selected_variables]),
+NonIschemicNonDiabetic=colMeans(joint_log_table[intersect(intersect(control_ids,dtm2control_ids),rownames(joint_log_table)),selected_variables]))
+
+# Center for each variable 
+for (biom in rownames(df_ischemia_dmt2_avg))
+{
+	# mean centering
+	df_ischemia_dmt2_avg[biom,]<-(df_ischemia_dmt2_avg[biom,]-mean(t(df_ischemia_dmt2_avg[biom,])))/sd(df_ischemia_dmt2_avg[biom,])
+}
+
+# Print Association Results Patients All Var Info	
+print(paste(outputfolder,paste("Ischemia_model_dmt2.png",sep=""),sep="/"))
+	Cairo(width = 15.0, height = 4.0, units = 'in', res = 600, file=paste(outputfolder,paste("Ischemia_model_dmt2.png",sep=""),sep="/"), type="png", bg="white")		
+	corrplot(t(df_ischemia_dmt2_avg[order_hclust,]), is.corr = FALSE,title=paste("Ischemia + DMT2 model"),mar=c(0,0,2,0),tl.col = "black",cl.cex=1, col = c("white","black"),cl.pos = "n")
+dev.off()
+
+#############################################################################################################
+# Model for diabetes+ischemia
+# Data.frame for ischemia
+df_ischemia_Sex_avg<-data.frame(
+IschemicMale=colMeans(joint_log_table[intersect(intersect(patients_ids,male_ids),rownames(joint_log_table)),selected_variables]),
+IschemicFemale=colMeans(joint_log_table[intersect(intersect(patients_ids,female_ids),rownames(joint_log_table)),selected_variables]),
+NonIschemicMale=colMeans(joint_log_table[intersect(intersect(control_ids,male_ids),rownames(joint_log_table)),selected_variables]),
+NonIschemicFemale=colMeans(joint_log_table[intersect(intersect(control_ids,female_ids),rownames(joint_log_table)),selected_variables]))
+
+# Center for each variable 
+for (biom in rownames(df_ischemia_Sex_avg))
+{
+	# mean centering
+	df_ischemia_Sex_avg[biom,]<-(df_ischemia_Sex_avg[biom,]-mean(t(df_ischemia_Sex_avg[biom,])))/sd(df_ischemia_Sex_avg[biom,])
+}
+
+# Print Association Results Patients All Var Info	
+print(paste(outputfolder,paste("Ischemia_model_Sex.png",sep=""),sep="/"))
+	Cairo(width = 15.0, height = 4.0, units = 'in', res = 600, file=paste(outputfolder,paste("Ischemia_model_Sex.png",sep=""),sep="/"), type="png", bg="white")		
+	corrplot(t(df_ischemia_Sex_avg[order_hclust,]), is.corr = FALSE,title=paste("Ischemia + Sex model"),mar=c(0,0,2,0),tl.col = "black",cl.cex=1, col = c("white","black"),cl.pos = "n")
+dev.off()
+
+
+#############################################################################################################
+# Model for diabetes+ischemia+Sex
+# Data.frame for ischemia
+df_ischemia_dmt2_avg_Sex<-data.frame(
+IschemicDiabeticM=colMeans(joint_log_table[intersect(intersect(intersect(patients_ids,male_ids),male_ids),rownames(joint_log_table)),selected_variables]),
+IschemicNonDiabeticM=colMeans(joint_log_table[intersect(intersect(intersect(patients_ids,dtm2control_ids),male_ids),rownames(joint_log_table)),selected_variables]),
+NonIschemicDiabeticM=colMeans(joint_log_table[intersect(intersect(intersect(control_ids,male_ids),male_ids),rownames(joint_log_table)),selected_variables]),
+NonIschemicNonDiabeticM=colMeans(joint_log_table[intersect(intersect(intersect(control_ids,dtm2control_ids),male_ids),rownames(joint_log_table)),selected_variables]),
+IschemicDiabeticF=colMeans(joint_log_table[intersect(intersect(intersect(patients_ids,male_ids),female_ids),rownames(joint_log_table)),selected_variables]),
+IschemicNonDiabeticF=colMeans(joint_log_table[intersect(intersect(intersect(patients_ids,dtm2control_ids),female_ids),rownames(joint_log_table)),selected_variables]),
+NonIschemicDiabeticF=colMeans(joint_log_table[intersect(intersect(intersect(control_ids,male_ids),female_ids),rownames(joint_log_table)),selected_variables]),
+NonIschemicNonDiabeticF=colMeans(joint_log_table[intersect(intersect(intersect(control_ids,dtm2control_ids),female_ids),rownames(joint_log_table)),selected_variables]))
+
+# Center for each variable 
+for (biom in rownames(df_ischemia_dmt2_avg_Sex))
+{
+	# mean centering
+	df_ischemia_dmt2_avg_Sex[biom,]<-(df_ischemia_dmt2_avg_Sex[biom,]-mean(t(df_ischemia_dmt2_avg_Sex[biom,])))/sd(df_ischemia_dmt2_avg_Sex[biom,])
+}
+
+# Print Association Results Patients All Var Info	
+print(paste(outputfolder,paste("Ischemia_model_dmt2_sex.png",sep=""),sep="/"))
+	Cairo(width = 15.0, height = 5.0, units = 'in', res = 600, file=paste(outputfolder,paste("Ischemia_model_dmt2_sex.png",sep=""),sep="/"), type="png", bg="white")		
+	corrplot(t(df_ischemia_dmt2_avg_Sex[order_hclust,]), is.corr = FALSE,title=paste("Ischemia + DMT2 + Sex model"),mar=c(0,0,2,0),tl.col = "black",cl.cex=1, col = c("white","black"),cl.pos = "n")
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
+#############################################################################################################
+# Run parallel bootstrapping
+##########################################################################################################################################
+# Save resutls in lists
+bootstrap_results<-list()
+bootstrap_results_selection<-list()
+bootstrap_X<-list()
+bootstrap_Y<-list()
+
+library(parallel)
+f <- function(boostraprs) 
+{
+  	# Select 50 samples from control and 50 samples from ischemia
+	ID_intersect_boot<-c(sample(intersect(patients_ids,ID_intersect), 70, replace = FALSE, prob = NULL),
+	sample(intersect(control_ids,ID_intersect), 70, replace = FALSE, prob = NULL))
+	
+	# Number of variables to be tested 1:50
+	# Take the log expression of each molecule and put it together
+	X_boot<-list(microRNA=CAD_microRNAs_log[ID_intersect_boot,],
+	biomarker=CAD_Biomarkers_log[ID_intersect_boot,],
+	metabolite=CAD_Metabolites_log[ID_intersect_boot,],
+	Info=CAD_Patients_Age2[ID_intersect_boot,])
+	
+	# Set phenotype
+	Y_boot<-CAD_Patients_Age[ID_intersect_boot,"Ischemia"]
+	
+	# Save X list
+	bootstrap_X[[boostraprs]]<-X_boot
+	
+	# Save Y list
+	bootstrap_Y[[boostraprs]]<-Y_boot
+	
+	# Cross validation # Increase number of cv
+	#mddsPLS_model_perf<-perf_mddsPLS(Xs=X,Y=as.factor(Y1),R=1, L0s = c(3:30),mode = "lda", plot_result = T, legend_label = T)
+	#mddsPLS_model_perf_1<-perf_mddsPLS(Xs=X,Y=as.factor(Y),R=ncomp, L0s = c(1:n_molecules),mode = "logit",NCORES=16,kfolds=10)
+	mddsPLS_model_perf_1<-perf_mddsPLS(Xs=X_boot,Y=as.factor(bootstrap_Y[[boostraprs]]),R=ncomp, L0s = c(1:(n_molecules/1)),mode = "logit",NCORES=1,plot_result = F, legend_label = F)			
+		
+	# Run the block-analysis cross-validation
+	bootstrap_results[[boostraprs]]<-mddsPLS_model_perf_1	
+	
+	return(bootstrap_results)
+}
+# Run boostraps
+bootstrap_results <- lapply(1:100, f)
+
+##########################################################################################################################################
+# Intersecton of patients
+ID_intersect<-intersect(intersect(rownames(CAD_Biomarkers_log),rownames(CAD_Metabolites_log)),rownames(CAD_microRNAs_log))
+
+# Take the log expression of each molecule and put it together
+joint_molecules_log<-cbind(CAD_microRNAs_log[ID_intersect,],
+CAD_Biomarkers_log[ID_intersect,],
+CAD_Metabolites_log[ID_intersect,])
+
+# Start log mean centered table
+joint_molecules_logMeanCenter<-joint_molecules_log
+
+# Perform mean-centering
+# Center for each variable 
+for (molecule in colnames(joint_molecules_log))
+{
+	# mean centering
+	joint_molecules_logMeanCenter[,molecule]<-(joint_molecules_log[,molecule]-mean(joint_molecules_log[,molecule]))/sd(joint_molecules_log[,molecule])
+}
+##########################################################################################################################################
+
+##########################################################################################################################################
+# Quick start in mixOmics
+library("mixOmics")
+
+# Set data
+Y1<-CAD_Patients_Age[rownames(joint_molecules_logMeanCenter),"Ischemia"]
+Y2<-CAD_Patients_Age[rownames(joint_molecules_logMeanCenter),"DMT2_known"]
+Y3<-paste(gsub("No","NonIschemic",gsub("Yes","Ischemic",CAD_Patients_Age[rownames(joint_molecules_logMeanCenter),"Ischemia"])),gsub("No","NonDiabetic",gsub("Yes","Diabetic",CAD_Patients_Age[rownames(joint_molecules_logMeanCenter),"DMT2_known"])),sep="-")
+
+##########################################################################################################################################
+# First 
+# Phenotype blocks - combine all the phenoytpe variables in a single Phenotype variable
+# Y1<-  block with ischemia
+# Xs <- block with sex+Smoking+DMT2
+# Set Sex and Smoking
+
+# Set Sex and Smoking
+CAD_Patients_Age2<-data.frame(Sex=as.numeric(CAD_Patients_Age$Sex)-1,Smoking_known=as.numeric(CAD_Patients_Age$Smoking_known)-1,DMT2_known=as.numeric(CAD_Patients_Age$DMT2_known)-1)
+
+# Set rownames
+rownames(CAD_Patients_Age2)<-rownames(CAD_Patients_Age)
+
+# Set Y
+Y<-Y1
+
+# Take the log expression of each molecule and put it together
+X<-list(microRNA=CAD_microRNAs[ID_intersect,],
+biomarker=CAD_Biomarkers[ID_intersect,],
+metabolite=CAD_Metabolites[ID_intersect,],
+Info=CAD_Patients_Age2[ID_intersect,])
+
+
+# Take the log expression of each molecule and put it together
+joint_log_table<-cbind(CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),top_selected_variables)],
+CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),top_selected_variables)],
+CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),top_selected_variables)])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##########################
+# Diablo framework
+# set up a full design where every block is connected
+# could also consider other weights, see our mixOmics manuscript
+design = matrix(0, ncol = length(X), nrow = length(X),
+                dimnames = list(names(X), names(X)))
+				
+##########################################################################################################################################
+# First save all files
+# Save resutls in lists
+bootstrap_results<-list()
+bootstrap_X<-list()
+bootstrap_Y<-list()
+bootstrap_results_selection<-list()
+
+# Set output
+parellellfolder="/home/flealvalentim/data/PREMED-CAD/parallel/"
+
+# Set optimal number
+optimal_number<-rbind(data.frame(block="microRNA",optimal=c(0)),
+	data.frame(block="metabolite",optimal=c(0)),
+	data.frame(block="Info",optimal=c(0)),
+	data.frame(block="biomarker",optimal=c(0)))
+	
+df_global_optimal<-data.frame()
+	
+# Stary data.frame
+df_selection_results<-c()	
+
+# Repeat bootstrap
+for (boostraprs in 1:100)
+{
+	print(boostraprs)
+							 			
+	# Save files
+	tune.block.splsda<-readRDS(paste(parellellfolder,paste("tune.block.splsda_",boostraprs,".rds",sep=""),sep="/"))
+	
+	# Optimized parameters			
+	list.keepX<-tune.block.splsda$choice.keepX
+	
+	# Take the error rate per class
+	error.rate.Ischemic<-data.frame(tune.block.splsda$error.rate.class)["Yes",]
+	
+	# Error rate per cl&ss
+	error.rate.NonIschemic<-data.frame(tune.block.splsda$error.rate.class)["No",]
+	
+	# Take the optimal number of biomarkers
+	optimal.number.biomarkers<-tune.block.splsda$choice.keepX$biomarker
+	
+	# Take the optimal number of metabolites
+	optimal.number.metabolites<-tune.block.splsda$choice.keepX$metabolite	
+	
+	# Take the optimal number of microRNAs
+	optimal.number.microRNAs<-tune.block.splsda$choice.keepX$microRNA	
+
+	# Take the optimal number of microRNAs
+	optimal.number.Info<-tune.block.splsda$choice.keepX$Info
+	
+	# Save data
+	boot_optimal<-rbind(data.frame(Boot=boostraprs,Optimal.number=optimal.number.biomarkers,group="Biomarkers"),
+	data.frame(Boot=boostraprs,Optimal.number=optimal.number.metabolites,group="Metabolites"),
+	data.frame(Boot=boostraprs,Optimal.number=optimal.number.microRNAs,group="microRNAs"),
+	data.frame(Boot=boostraprs,Optimal.number=optimal.number.Info,group="Info"))	
+			
+	# Add error
+	boot_optimal<-rbind(cbind(boot_optimal,data.frame(error.rate=error.rate.Ischemic,Type="Ischemic")),
+	cbind(boot_optimal,data.frame(error.rate=error.rate.NonIschemic,Type="nonIschemic")))
+	
+	
+	
+	# Bind results
+	df_global_optimal<-rbind(df_global_optimal,boot_optimal)
+		
+	# Bind to optimal number
+	optimal_number<-rbind(data.frame(block="microRNA",optimal=list.keepX$microRNA),
+	data.frame(block="metabolite",optimal=list.keepX$metabolite),
+	data.frame(block="Info",optimal=list.keepX$Info),
+	data.frame(block="biomarker",optimal=list.keepX$biomarker),optimal_number)
+	
+	# Save files	
+	X_boot<-readRDS(file = paste(parellellfolder,paste("bootstrap_X_",boostraprs,".rds",sep=""),sep="/"))
+	Y_boot<-readRDS(file = paste(parellellfolder,paste("bootstrap_Y_",boostraprs,".rds",sep=""),sep="/"))	
+	
+	# Compute results
+	MyResult.splsda <- block.splsda(X_boot, Y_boot,design=design,scale = FALSE,keepX=list.keepX)
+	
+	# Selected variables
+	##########################################################################################################################################
+	# Selected variables comp1
+	selected_variables<-c(selectVar(MyResult.splsda, comp = c(1), block = c(1,2,3))$microRNA$name,
+	selectVar(MyResult.splsda, comp = c(1), block = c(1,2,3,4))$metabolite$name,
+	selectVar(MyResult.splsda, comp = c(1), block = c(1,2,3,4))$biomarker$name,
+	selectVar(MyResult.splsda, comp = c(1), block = c(1,2,3,4))$Info$name)		
+
+	# Addo to results vertor
+	df_selection_results<-c(df_selection_results,selected_variables)
+}
+##########################################################################################################################################
+library("stats")
+#ggplot(data=df_cv_results, aes(x=L0s, y=GoodClassRate, group=Group,color=Group)) + geom_line(size=2)+ ggtitle("Good classification rate across L0s for bootstrapped samples")+ theme_bw() + xlab("L0s") + ylab("Good classification rate")+ scale_y_continuous(breaks=c(seq(0,1,0.05)))+ scale_x_continuous(breaks=seq(1,max(L0s),2))+ scale_color_manual(values=c(Control="black",Ischemic="#E69F00",AvgPrecision="Grey"))
+plot_cv_results<-ggplot(data=df_global_optimal, aes(x=Optimal.number, y=error.rate,group=Type,color=Type)) + facet_grid(rows = vars(group)) + geom_point(size=1.5)+ ggtitle("Error rate across bootstrapped samples")+ theme_bw() + xlab("number of variables") + ylab("error rate")+ scale_y_continuous(breaks=c(seq(0,1,0.05)))+ scale_color_manual(values=c(nonIschemic="black",Ischemic="#E69F00"))+geom_smooth(method=loess,se=TRUE,span = 0.1)
+
+
+#plot_cv_results<- plot_cv_results + geom_vline(xintercept = 43, linetype="dashed", color = "blue", size=1.0)
+
+# Save plot
+Cairo(width = 15.0, height = 7.5, units = 'in', res = 600, file=paste(outputfolder,paste("plot_cv_results.png",sep=""),sep="/"), type="png", bg="white")		
+#png(width = 15.0, height = 7.5, units = 'in', res = 600, file="C:/Users/fv2/Documents/plot_cv_results.png")			
+	plot_cv_results
+dev.off()
+##########################################################################################################################################
+# Plot optipmal number of variables per bloc
+
+# Create table R
+df_optimal_number<- data.frame(t(table(optimal_number)))
+
+# Remove zero line
+df_optimal_number[which(as.numeric(as.vector(df_optimal_number$optimal))==1),"Freq"]<-c(0,93,0,1)
+
+# Create the plot
+print(paste(outputfolder,"optimal_number_diablo.png",sep="/"))
+Cairo(width = 10, height = 10, units = 'in', res = 600, file=paste(outputfolder,"optimal_number_diablo.png",sep="/"), type="png", bg="white")		
+	print(ggplot( df_optimal_number, aes( x = optimal, y = Freq ) )+ 
+		geom_bar( stat = "identity", position = "stack" )+theme_minimal() + theme( legend.position = "bottom" )+labs(title="Optimal number of selected variables per block",
+		x ="Optimal number of variables", y = "Frequency")+ facet_grid(rows = vars(block),scales = "free_y"))
+dev.off()
+
+
+##########################################################################################################################################
+# Plot final selection
+# Save dataset
+df_selection_results<-data.frame(table(df_selection_results))
+
+# Rename table rows
+rownames(df_selection_results)<-df_selection_results$df_selection_results
+
+# Rename table columns
+colnames(df_selection_results)<-c("Variable","Frequency")
+
+# Re-order_table
+df_selection_results<-df_selection_results[order(-df_selection_results$Frequency),]
+
+# Re-order factor
+df_selection_results$Variable<-factor(df_selection_results$Variable,levels=as.vector(df_selection_results$Variable))
+
+# Take the top variables according to final selection of max variables
+# Annotation for molecules
+ha_molecules<-rbind(data.frame(Molecules=unique(colnames(CAD_microRNAs)),Block="microRNA"),		
+		data.frame(Molecules=unique(colnames(CAD_Biomarkers)),Block="Biomarker"),	
+		data.frame(Molecules=unique(colnames(CAD_Metabolites)),Block="Metabolite"),
+		data.frame(Molecules=colnames(CAD_Patients_Age),Block="Info"))
+
+MAX_microRNA=10
+MAX_Biomarker=4
+MAX_Metabolite=8
+MAX_Info=1
+
+# Only selected molecules
+df_selection_results<-rbind(df_selection_results[rownames(df_selection_results) %in% ha_molecules[which(ha_molecules$Block=="microRNA"),"Molecules"],][1:MAX_microRNA,],
+df_selection_results[rownames(df_selection_results) %in% ha_molecules[which(ha_molecules$Block=="Biomarker"),"Molecules"],][1:MAX_Biomarker,],
+df_selection_results[rownames(df_selection_results) %in% ha_molecules[which(ha_molecules$Block=="Metabolite"),"Molecules"],][1:MAX_Metabolite,],
+df_selection_results[rownames(df_selection_results) %in% ha_molecules[which(ha_molecules$Block=="Info"),"Molecules"],][1:MAX_Info,])
+
+# Plot results
+plot_variable_frequency<-ggplot(data=df_selection_results, aes(x=Variable, y=Frequency)) + geom_bar(stat="identity", position=position_dodge())+  theme_minimal() #+  coord_flip()
+
+# Save plot
+#Cairo(width = 7.5, height = 5, units = 'in', res = 600, file=paste(outputfolder,paste("plot_variable_frequency.png",sep=""),sep="/"), type="png", bg="white")		
+Cairo(width = 6.5, height = 5, units = 'in', res = 600, file=paste(outputfolder,paste("plot_variable_frequency.png",sep=""),sep="/"), type="png", bg="white")		
+#png(width = 15.0, height = 7.5, units = 'in', res = 600, file="C:/Users/fv2/Documents/plot_variable_frequency.png")			
+	plot_variable_frequency+ggtitle("Variable selection across boostraps")+ theme_bw() + xlab("Variable") + ylab("Selection frequency")+ theme(axis.text.x = element_text(angle = 90))#+ coord_flip()
+dev.off()
+
+##########################################################################################################################################
+Sel_molecules_microRNA<-as.vector(df_selection_results[rownames(df_selection_results) %in% ha_molecules[which(ha_molecules$Block=="microRNA"),"Molecules"],][1:MAX_microRNA,"Variable"])
+Sel_molecules_biomarker<-as.vector(df_selection_results[rownames(df_selection_results) %in% ha_molecules[which(ha_molecules$Block=="Biomarker"),"Molecules"],][1:MAX_Biomarker,"Variable"])
+Sel_molecules_metabolites<-as.vector(df_selection_results[rownames(df_selection_results) %in% ha_molecules[which(ha_molecules$Block=="Metabolite"),"Molecules"],][1:MAX_Metabolite,"Variable"])
+Sel_molecules_info<-as.vector(df_selection_results[rownames(df_selection_results) %in% ha_molecules[which(ha_molecules$Block=="Info"),"Molecules"],][1:MAX_Info,"Variable"])
+
+# Create list to keep
+list.keepX <- list(microRNA = MAX_microRNA, biomarker = MAX_Biomarker, metabolite = MAX_Metabolite,Info=MAX_Info)
+
+##########################################################################################################################################
+# Set Y table
+dmt2<-data.frame(CAD_Patients_Age2[ID_intersect,Sel_molecules_info])
+
+# Set rownames
+rownames(dmt2)<-rownames(CAD_Patients_Age2[ID_intersect,])
+
+colnames(dmt2)<-"DMT2"
+##########################################################################################################################################
+
+# Set Y
+Y<-Y1
+
+# Take the log expression of each molecule and put it together
+X<-list(microRNA=CAD_microRNAs[ID_intersect,Sel_molecules_microRNA],
+biomarker=CAD_Biomarkers[ID_intersect,Sel_molecules_biomarker],
+metabolite=CAD_Metabolites[ID_intersect,Sel_molecules_metabolites],
+Info=dmt2)
+
+# Create list to keep
+list.keepX <- list(microRNA = c(10), biomarker = c(4), metabolite = c(8),Info=c(1))
+
+# Compute results
+MyResult.splsda <- block.splsda(X, Y1,design=design,scale = TRUE,keepX=list.keepX,ncomp=1)
+
+# Create table
+superComponent_coefficients<-rbind(MyResult.splsda$loadings[[1]],
+MyResult.splsda$loadings[[2]],
+MyResult.splsda$loadings[[3]],
+MyResult.splsda$loadings[[4]])
+write.xlsx(superComponent_coefficients, file=paste(outputfolder,"/","SuperComponent_Coefficients","",".xlsx",sep=""),sheetName="Signature4", append=TRUE)
+##########################################################################################################################################
+# Construcrt signature per block
+block1<-sum(MyResult.splsda$loadings[[1]])
+block2<-sum(MyResult.splsda$loadings[[2]])
+block3<-sum(MyResult.splsda$loadings[[3]])
+block4<-sum(MyResult.splsda$loadings[[4]])
+##########################################################################################################################################
+df_super_component<-data.frame(Ischemia=c(),Coeff=c(),Age=c(),Sex=c())
+
+# For each loading
+for (block in 1:4)
+{
+	# For each patient
+	for (patient in ID_intersect)
+	{
+		# Start coeffiecient for that patient, in that block		
+		start_coefficients<-data.frame(Ischemia=CAD_Patients_Age[patient,"Ischemia"],Coefficient=0,Block=block,Age=CAD_Patients_Age[patient,"Age"],Sex=CAD_Patients_Age[patient,"Sex"])
+		
+		# For each molecule
+		for (biomolecule in rownames(MyResult.splsda$loadings[[block]]))
+		{
+			# Re-caulculate coefficients
+			Coefficient=start_coefficients$Coefficient+X[[block]][patient,biomolecule]*MyResult.splsda$loadings[[block]][biomolecule,]									
+			
+			# Start coeffiecient for that patient, in that block		
+			start_coefficients<-data.frame(Ischemia=CAD_Patients_Age[patient,"Ischemia"],Coefficient=Coefficient,Block=block,Age=CAD_Patients_Age[patient,"Age"],Sex=CAD_Patients_Age[patient,"Sex"])			
+			
+		}
+		# Add to table
+		df_super_component<-rbind(df_super_component,start_coefficients)
+	}
+
+}
+# Create table
+df_super_component_formatted<-cbind(data.frame(Coeff_block1=df_super_component[which(df_super_component$Block==1),2]),
+data.frame(Coeff_block2=df_super_component[which(df_super_component$Block==2),2]),
+data.frame(Coeff_block3=df_super_component[which(df_super_component$Block==3),2]),
+data.frame(Coeff_block4=df_super_component[which(df_super_component$Block==4),2]),
+df_super_component[which(df_super_component$Block==2),-c(2,3)])
+
+
+rownames(df_super_component_formatted)<-ID_intersect
+##########################################################################################################################################
+library("ggpubr")
+
+##########################################################################################################################################
+library("ggpubr")
+
+# Create the plot
+print(paste(outputfolder,paste("Diablo","joint_","splsda.png",sep=""),sep="/"))
+Cairo(width = 10, height = 10, units = 'in', res = 600, file=paste(outputfolder,paste("Diablo","joint_","splsda.png",sep=""),sep="/"), type="png", bg="white")		
+	circosPlot3(MyResult.splsda, cutoff=0.7, size.labels = 1, comp=1,size.variables = 1,color.Y=c(colorblind_pal()(8)[c(1,2)]),color.blocks=c(colorblind_pal()(8)[c(2,3,4,6)]),color.cor=c(colorblind_pal()(8)[c(6,7)]))
+dev.off()
+
+# Create the plot
+print(paste(outputfolder,paste("Loadings","joint_","splsda.png",sep=""),sep="/"))
+Cairo(width = 12.0, height = 7.0, units = 'in', res = 600, file=paste(outputfolder,paste("Loadings","joint_","splsda1.png",sep=""),sep="/"), type="png", bg="white")		
+	plotLoadings(MyResult.splsda, comp = 1, contrib = "max",color.Y=c(colorblind_pal()(8)[c(1,2)]),color.blocks=c(colorblind_pal()(8)[c(3,4,5)]),color.cor=c(colorblind_pal()(8)[c(6,7)]))
+dev.off()
+##########################################################################################################################################
+#formula.full=paste("Ischemia ~ Sex + ",paste(colnames(CAD_Biomarkers),collapse=" + "),sep="")
+formula.full=paste("Ischemia ~ Age + Sex + Coeff_block1 + Coeff_block1 + Coeff_block3 + Coeff_block4")	
+
+# Produce glm model
+glm.full<-glm(formula=formula.full,family=binomial(link='logit'), data=df_super_component_formatted, na.action=na.omit)
+
+# Create list
+roc_molecules<-list()
+roc_names<-list()
+	
+# Save all rock curve in a list
+roc_molecules[["Molecular signature 4"]] <- roc(Ischemia~glm.full$fitted.values, data = df_super_component_formatted, plot = FALSE,ci=TRUE)	
+
+# Calculate CI
+CI<-round(as.vector(roc_molecules[["Molecular signature 4"]]$ci),3)	
+	
+# Save name of full model
+roc_names[["Molecular signature 4"]] <-paste("AUC=",CI[2]," 95%CI=",CI[1],"-",CI[3],sep="")
+
+# Create first plot
+names(roc_molecules)<-roc_names[["Molecular signature 4"]]
+C<-ggroc(roc_molecules)+ geom_line()+ theme_bw()+ ggtitle("ROC curve analysis of molecular Signature 1") + theme(legend.position = c(0.50, 0.3), legend.background = element_rect(color = NA,fill = NA, size = 1, linetype = "solid"))+theme(legend.title = element_blank())+ scale_color_manual(values = "black")
+	 
+# Corrlation plot
+print(paste(outputfolder,"/",paste("ROC_Curve_plot",sep=""),".png",sep=""))
+Cairo(width = 5, height = 5, units = 'in', res = 600, file=paste(outputfolder,"/",paste("ROC_Curve_plot",sep=""),".png",sep=""), type="png", bg="white")		
+		print(C)
+dev.off()
+##########################################################################################################################################
+biomolecules=c("Pro_BNP","DMT2_known","hsTroponinI","lysoPC_a_C18_2","PC_ae_C34_3","SM_C26_1","C12_1","PC_ae_C34_2","SM_C24_0","SM_OH_C22_1","SM_OH_C24_1","hsa-miR-10a","hsa-miR-1274b","hsa-miR-146b-5p","hsa-miR-212","hsa-miR-335","hsa-miR-500b")
+biomolecules=c("hsa-miR-10a","hsa-miR-183","hsa-miR-1274b","PC_aa_C32_3","PC_aa_C36_6","PC_aa_C38_4","PC_ae_C32_1","PC_ae_C32_2","PC_ae_C34_3","PC_ae_C36_1","PC_ae_C36_5","PC_ae_C40_2","lysoPC_a_C18_1","lysoPC_a_C18_2","SM_OH_C16_1","SM_C26_1","hsTroponinI","HDLCholesterin","LDLCholesterin","Glucose","DMT2_known")
+#formula.full=paste("Ischemia ~ Sex + ",paste(colnames(CAD_Biomarkers),collapse=" + "),sep="")
+formula.full=paste("Ischemia ~ Age + Sex + ",paste(paste0("`", biomolecules, "`"),collapse=" + "),sep="")
+
+# Produce glm model
+glm.full<-glm(formula=formula.full,family=binomial(link='logit'), data=joint_molecules_logMeanCenter_work, na.action=na.omit)
+
+# Write excel
+write.xlsx(data.frame(Coeff=glm.full$coefficients), file=paste(outputfolder,"/","SuperComponent_Coefficients","",".xlsx",sep=""),sheetName="Signature1", append=TRUE)
+
+# Data frame with coefficients
+df_coeff<-data.frame(Coeff=glm.full$coefficients)
+
+# Compile data.frame
+rownames(df_coeff)<-gsub("`","",rownames(df_coeff))
+
+
+# Construcrt signature per block
+block1_var<-intersect(rownames(df_coeff),colnames(CAD_microRNAs))
+block2_var<-intersect(rownames(df_coeff),colnames(CAD_Biomarkers))
+block3_var<-intersect(rownames(df_coeff),colnames(CAD_Metabolites))
+block4_var<-intersect(gsub("Yes","",rownames(df_coeff)),colnames(df_info))
+
+# Construcrt signature per block
+block1<-sum(df_coeff[block1_var,])
+block2<-sum(df_coeff[block2_var,])
+block3<-sum(df_coeff[block3_var,])
+block4<-sum(df_coeff[block4_var,])
+
+# Dataframe b
+df_biomolecule<-rbind(data.frame(Block=1,biomolecule=block1_var,Coeff=df_coeff[block1_var,]),
+data.frame(Block=2,biomolecule=block2_var,Coeff=df_coeff[block2_var,]),
+data.frame(Block=3,biomolecule=block3_var,Coeff=df_coeff[block3_var,]),
+data.frame(Block=4,biomolecule=block4_var,Coeff=df_coeff[block4_var,]))
+
+##########################################################################################################################################
+df_super_component<-data.frame(Ischemia=c(),Coeff=c(),Age=c(),Sex=c())
+
+# For each loading
+for (block in unique(df_biomolecule$Block))
+{
+	# For each patient
+	for (patient in ID_intersect)
+	{
+		# Start coeffiecient for that patient, in that block		
+		start_coefficients<-data.frame(Ischemia=CAD_Patients_Age[patient,"Ischemia"],Coefficient=0,Block=block,Age=CAD_Patients_Age[patient,"Age"],Sex=CAD_Patients_Age[patient,"Sex"])
+		
+		# For each molecule
+		for (biomolecule in as.vector(df_biomolecule[which(df_biomolecule$Block==block),"biomolecule"]))
+		{							
+			# Re-caulculate coefficients
+			Coefficient=start_coefficients$Coefficient+X[[block]][patient,biomolecule]*df_biomolecule[which(df_biomolecule$Block==block & df_biomolecule$biomolecule==biomolecule),"Coeff"]
+			
+			# Start coeffiecient for that patient, in that block		
+			start_coefficients<-data.frame(Ischemia=CAD_Patients_Age[patient,"Ischemia"],Coefficient=Coefficient,Block=block,Age=CAD_Patients_Age[patient,"Age"],Sex=CAD_Patients_Age[patient,"Sex"])			
+			
+		}
+		# Add to table
+		df_super_component<-rbind(df_super_component,start_coefficients)
+	}
+
+}
+# Create table
+df_super_component_formatted<-cbind(data.frame(Coeff_block1=df_super_component[which(df_super_component$Block==1),2]),
+data.frame(Coeff_block2=df_super_component[which(df_super_component$Block==2),2]),
+data.frame(Coeff_block3=df_super_component[which(df_super_component$Block==3),2]),
+data.frame(Coeff_block4=df_super_component[which(df_super_component$Block==4),2]),
+df_super_component[which(df_super_component$Block==2),-c(2,3)])
+
+# Set rownames
+rownames(df_super_component_formatted)<-ID_intersect
+
+
+
+##########################################################################################################################################
+group4=c("PC_ae_C34_2","PC_ae_C34_3","HDLCholesterin","Cholesterin","SM_C26_1","hsa-miR-10a","LDLCholesterin")
+
+biomolecules=as.vector(group1)
+#formula.full=paste("Ischemia ~ Sex + ",paste(colnames(CAD_Biomarkers),collapse=" + "),sep="")
+formula.full=paste("Ischemia ~ Age + Sex + ",paste(paste0("`", biomolecules, "`"),collapse=" + "),sep="")
+
+# Produce glm model
+glm.full<-glm(formula=formula.full,family=binomial(link='logit'), data=joint_molecules_logMeanCenter_work, na.action=na.omit)
+
+# Data frame with coefficients
+df_coeff<-data.frame(Coeff=glm.full$coefficients)
+
+# Compile data.frame
+rownames(df_coeff)<-gsub("`","",rownames(df_coeff))
+
+
+# Construcrt signature per block
+block1_var<-intersect(rownames(df_coeff),colnames(CAD_microRNAs))
+block2_var<-intersect(rownames(df_coeff),colnames(CAD_Biomarkers))
+block3_var<-intersect(rownames(df_coeff),colnames(CAD_Metabolites))
+block4_var<-intersect(gsub("Yes","",rownames(df_coeff)),colnames(df_info))
+
+# Construcrt signature per block
+block1<-sum(df_coeff[block1_var,])
+block2<-sum(df_coeff[block2_var,])
+block3<-sum(df_coeff[block3_var,])
+block4<-sum(df_coeff[block4_var,])
+
+# Dataframe b
+df_biomolecule<-rbind(data.frame(Block=1,biomolecule=block1_var,Coeff=df_coeff[block1_var,]),
+data.frame(Block=1,biomolecule=block2_var,Coeff=df_coeff[block2_var,]),
+data.frame(Block=1,biomolecule=block3_var,Coeff=df_coeff[block3_var,]),
+data.frame(Block=1,biomolecule=block4_var,Coeff=df_coeff[block4_var,]))
+
+##########################################################################################################################################
+joint_molecules_logMeanCenter_work$DMT2_known_2<-joint_molecules_logMeanCenter_work$DMT2_known
+joint_molecules_logMeanCenter_work$DMT2_known<-as.numeric(joint_molecules_logMeanCenter_work$DMT2_known)-1
+
+df_super_component<-data.frame(Ischemia=c(),Coeff=c(),Age=c(),Sex=c())
+
+# For each loading
+for (block in unique(df_biomolecule$Block))
+{
+	# For each patient
+	for (patient in ID_intersect)
+	{
+		# Start coeffiecient for that patient, in that block		
+		start_coefficients<-data.frame(Ischemia=CAD_Patients_Age[patient,"Ischemia"],Coefficient=0,Block=block,Age=CAD_Patients_Age[patient,"Age"],Sex=CAD_Patients_Age[patient,"Sex"])
+		
+		# For each molecule
+		for (biomolecule in as.vector(df_biomolecule[which(df_biomolecule$Block==block),"biomolecule"]))
+		{							
+			# Re-caulculate coefficients
+			Coefficient=start_coefficients$Coefficient+joint_molecules_logMeanCenter_work[patient,biomolecule]*df_biomolecule[which(df_biomolecule$Block==block & df_biomolecule$biomolecule==biomolecule),"Coeff"]
+			
+			# Start coeffiecient for that patient, in that block		
+			start_coefficients<-data.frame(Ischemia=CAD_Patients_Age[patient,"Ischemia"],Coefficient=Coefficient,Block=block,Age=CAD_Patients_Age[patient,"Age"],Sex=CAD_Patients_Age[patient,"Sex"])			
+			
+		}
+		# Add to table
+		df_super_component<-rbind(df_super_component,start_coefficients)
+	}
+
+}
+# Create table
+df_super_component_formatted<-cbind(data.frame(Coeff_block1=df_super_component[which(df_super_component$Block==1),2]),
+df_super_component[which(df_super_component$Block==1),-c(2,3)])
+
+# Set rownames
+rownames(df_super_component_formatted)<-ID_intersect
+
+##########################################################################################################################################
+#formula.full=paste("Ischemia ~ Sex + ",paste(colnames(CAD_Biomarkers),collapse=" + "),sep="")
+formula.full=paste("Ischemia ~ Age + Sex + Coeff_block1")	
+
+# Produce glm model
+glm.full<-glm(formula=formula.full,family=binomial(link='logit'), data=df_super_component_formatted, na.action=na.omit)
+
+# Create results frame
+#df_results<-data.frame()
+
+# Merge results
+#df_results<-rbind(df_results,data.frame("Signature"=4,Patients=ID_intersect,Values=as.vector(glm.full$fitted.values),Title="Signature 4",Ischemia=CAD_Patients_Age[ID_intersect,"Ischemia"]))
+#df_results<-rbind(df_results,data.frame("Signature"=1,Patients=names(glm.full$fitted.values),Values=as.vector(glm.full$fitted.values)))
+
+
+
+
+
+df_results$Title<-""
+df_results[df_results$Signature==1,"Title"]<-"Signature 1"
+df_results[df_results$Signature==2,"Title"]<-"Signature 2"
+df_results[df_results$Signature==3,"Title"]<-"Signature 3"
+df_results[df_results$Signature==4,"Title"]<-"Signature 4"
+
+df_results[df_results$Signature==1,"Values"]==df_results[df_results$Signature==2,"Values"]
+df_results[df_results$Signature==1,"Values"]==df_results[df_results$Signature==3,"Values"]
+df_results[df_results$Signature==1,"Values"]==df_results[df_results$Signature==4,"Values"]
+
+df_results[df_results$Signature==2,"Values"]==df_results[df_results$Signature==3,"Values"]
+df_results[df_results$Signature==2,"Values"]==df_results[df_results$Signature==4,"Values"]
+
+df_results[df_results$Signature==3,"Values"]==df_results[df_results$Signature==4,"Values"]
+
+df_results[df_results$Signature==2,"Title"]<-"Signature 2"
+df_results[df_results$Signature==3,"Title"]<-"Signature 3"
+df_results[df_results$Signature==4,"Title"]<-"Signature 4"
+
+# Filter only the two signatures
+df_results2<-df_results[df_results$Signature==2 | df_results$Signature==4,]
+
+df_results2[df_results2$Signature==3,"Title"]<-"Signature 4"
+df_results2[df_results2$Signature==2,"Title"]<-"Signature 2"
+
+
+# Plot table
+# Print Association Results Patients All Var Info	
+print(paste(outputfolder,"df_all_values.png",sep="/"))
+Cairo(width = 5, height = 10.0, units = 'in', res = 600, file=paste(outputfolder,"df_all_values.png",sep="/"), type="png", bg="white")		
+	#ggplot(df_Insulin, aes(x=Ischemia, y=Insulin, fill=Ischemia))+ geom_bar(position="dodge", stat="identity") 
+	plot1<-ggplot(df_results2, aes(x=Ischemia, y=Values, fill=Ischemia)) + facet_grid(cols=vars(Title), scales = "free_y") +scale_fill_manual(values=c(Ischemia_color[1],Ischemia_color[2])) + theme(legend.position="bottom")+ stat_compare_means(method = "wilcox.test")+geom_boxplot(outlier.colour="black", outlier.shape=16, outlier.size=2, notch=FALSE) + ylab("Ischemia-score")		
+	plot2<-ggplot(df_results2, aes(x=Ischemia, y=Values, fill=Ischemia)) + facet_grid(cols=vars(Title), scales = "free_y") +scale_fill_manual(values=c(Ischemia_color[1],Ischemia_color[2])) + theme(legend.position="bottom")+ stat_compare_means(method = "t.test")+  geom_bar(stat = "summary", fun.y = "mean",color="black", position=position_dodge())+ theme(legend.position="bottom")+geom_errorbar(stat="summary",fun.ymin=function(x){mean(x)},fun.ymax=function(x) {mean(x)+sd(x)})+ ylab("Ischemia-score")		
+	plot3<-ggplot(df_results2, aes(x=Values, fill=Ischemia ,color=Ischemia)) + geom_histogram(fill="white", alpha=0.5, position="identity")	+ facet_grid(cols=vars(Title), scales = "free_y") +scale_color_manual(values=c(Ischemia_color[1],Ischemia_color[2])) + theme(legend.position="bottom")+ ylab("Ischemia-score")
+	print(ggarrange(plotlist=list(plot1,plot2,plot3), ncol = 1, nrow = 3,common.legend = TRUE, legend = "bottom"))		
+dev.off()	
+
+ 
+
+
+##########################################################################################################################################
+slected_variables_comp<-c(Sel_molecules_microRNA,
+Sel_molecules_biomarker,
+Sel_molecules_metabolites,
+Sel_molecules_info)
+
+
+# Take the log expression of each molecule and put it together
+joint_dataset<-cbind(CAD_microRNAs[ID_intersect,],CAD_Biomarkers[ID_intersect,],CAD_Metabolites[ID_intersect,],CAD_Patients_Age2[ID_intersect,])
+
+# Select molecules
+joint_dataset<-joint_dataset[,slected_variables_comp]
+
+
+# Merge tables
+joint_molecules_logMeanCenter_work<-merge(data.frame(joint_dataset,ID=rownames(joint_dataset)),data.frame(CAD_Patients_Age,ID=rownames(CAD_Patients_Age)),by="ID")
+
+# Set rownames(CAD_Biomarkers_work)
+rownames(joint_molecules_logMeanCenter_work)<-as.vector(joint_molecules_logMeanCenter_work$ID)
+
+# Remove col ID
+joint_molecules_logMeanCenter_work<-joint_molecules_logMeanCenter_work[,-c(1)]
+
+colnames(joint_molecules_logMeanCenter_work)[1:dim(joint_dataset)[2]]<-colnames(joint_dataset)
+
+# Save plot
+Cairo(width = 15.0, height = 15.0, units = 'in', res = 600, file=paste(outputfolder,paste("Corrplot","joint_","splsda.png",sep=""),sep="/"), type="png", bg="white")		
+	corrplot(cor(joint_dataset[,slected_variables_comp], method = "pearson", use = "complete.obs"), method = "number",order = "hclust",tl.col = "black",cl.cex=1, col = c("black","darkgrey","#1A1110"), number.cex = 1.3,tl.cex =2,addrect = 3,hclust.method="ward.D2") # Display the correlation coefficient
+dev.off()
+
+
+# Create 
+create_OptimaNumberMoleculeClusters(exp_dataset=joint_dataset,work=joint_molecules_logMeanCenter_work,outputfolder=outputfolder)
+##########################################################################################################################################
+#############################################################################################################
+# Annotation for molecules
+ha_molecules<-rbind(data.frame(Molecules=unique(colnames(CAD_microRNAs)),Block="microRNA"),		
+		data.frame(Molecules=unique(colnames(CAD_Biomarkers)),Block="Biomarker"),	
+		data.frame(Molecules=unique(colnames(CAD_Metabolites)),Block="Metabolite"),
+		data.frame(Molecules=rownames(mddsPLS_model_class_1$var_selected$Info),Block="Info"))
+		
+		
+	
+# Make copy
+ha_molecules2<-data.frame(ha_molecules$Block)
+
+# Set rownames		
+rownames(ha_molecules2)<-ha_molecules$Molecules
+
+# Replace
+ha_molecules<-ha_molecules2
+
+
+
+# Filter dataset
+joint_dataset<-joint_molecules_logMeanCenter_work[,slected_variables_comp]
+
+# Set DMT2
+joint_dataset$DMT2_known<-as.numeric(joint_dataset$DMT2_known)-1
+
+# Preselect molecules
+ha_molecules<-data.frame(Block=ha_molecules[colnames(joint_dataset),])
+
+# Set rownames()
+rownames(ha_molecules)<-colnames(joint_dataset)
+
+# Set file name
+filename=paste(outputfolder,paste("Heatmap_","comp12","plot.png",sep=""),sep="/")
+
+# Set tile
+title="block.splsda selected variabels "
+
+
+
+
+
+
+
+# Return optimal number os clusters
+hvlust_molecules<-hclust(as.dist(1-cor(joint_dataset, method = "pearson", use = "complete.obs")),method="ward.D2")
+hvlust_samples<-hclust(dist(joint_dataset,method = "euclidean"), method="ward.D2")
+	
+# Set number of clusters
+k.samples<-2
+k.molecules<-7#5
+
+#data_pheat_map<-t(joint_dataset)
+ha<-ha[ rownames(joint_dataset),c("Smoking_known","DMT2_known","Sex","Ischemia")]
+anno_colors<-varColor[c("Smoking_known","DMT2_known","Sex","Ischemia")]
+anno_colors[["Cluster"]]<-c("1"="#56B4E9","2"="#009E73")	
+# Calculate tree row
+tree_row<-hvlust_molecules
+tree_col<-hvlust_samples
+res<-pheatmap(t(joint_dataset),cluster_cols=tree_col,cluster_rows=tree_row,cutree_cols=k.samples,cutree_rows=k.molecules,main=title,fontsize_row = 8,annotation_col=ha,annotation_colors=anno_colors,show_colnames=FALSE, scale="none",color = viridis(32))	
+ha$Cluster=factor(cutree(res$tree_col, k = k.samples)[rownames(ha)]	)
+
+# Create the plot
+print(paste(outputfolder,paste("Heatmap_","joint_","plot.png",sep=""),sep="/"))
+Cairo(width = 9, height = 10.0, units = 'in', res = 600, file=paste(outputfolder,paste("Heatmap_","joint_","plot.png",sep=""),sep="/"), type="png", bg="white")			
+	print(res)
+dev.off()
+
+#############################################################################################################
+# Calculate ROC
+# Annotation for molecules
+ha_molecules<-rbind(data.frame(Molecules=unique(colnames(CAD_microRNAs)),Block="microRNA"),		
+		data.frame(Molecules=unique(colnames(CAD_Biomarkers)),Block="Biomarker"),	
+		data.frame(Molecules=unique(colnames(CAD_Metabolites)),Block="Metabolite"),
+		data.frame(Molecules=c("Sex","DMT2_known","Smoking_known"),Block="Info"))
+		
+	
+# Make copy
+ha_molecules2<-data.frame(ha_molecules$Block)
+
+# Set rownames		
+rownames(ha_molecules2)<-ha_molecules$Molecules
+
+# Replace
+ha_molecules<-ha_molecules2
+
+# Merge tables
+#CAD_molecule_work<-merge(data.frame(joint_molecules_logMeanCenter,ID=rownames(joint_molecules_logMeanCenter)),data.frame(CAD_Patients_Age2,ID=rownames(CAD_Patients_Age2)),by="ID")
+CAD_molecule_work<-merge(data.frame(cbind(X[[1]],X[[2]],X[[3]]),ID=rownames(cbind(X[[1]],X[[2]],X[[3]]))),data.frame(CAD_Patients_Age2,ID=rownames(CAD_Patients_Age2)),by="ID")
+
+# Set rownames(CAD_Biomarkers_work)
+rownames(CAD_molecule_work)<-as.vector(CAD_molecule_work$ID)
+
+# Remove col ID
+CAD_molecule_work<-CAD_molecule_work[,-c(1)]
+
+# Set colnames
+colnames(CAD_molecule_work)[1:dim(data.frame(cbind(X[[1]],X[[2]],X[[3]])))[2]]<-c(colnames(X[[1]]),colnames(X[[2]]),colnames(X[[3]]))
+
+
+# Select variables
+CAD_molecule_work<-CAD_molecule_work[,slected_variables_comp]
+
+
+# Set ischemia
+CAD_molecule_work$Ischemia<-CAD_Patients_Age[rownames(CAD_molecule_work),"Ischemia"]
+CAD_molecule_work$Sex<-CAD_Patients_Age[rownames(CAD_molecule_work),"Sex"]
+CAD_molecule_work$Smoking_known<-CAD_Patients_Age[rownames(CAD_molecule_work),"Smoking_known"]
+CAD_molecule_work$DMT2_known<-CAD_Patients_Age[rownames(CAD_molecule_work),"DMT2_known"]
+
+# Plot ROC analysis
+# Here
+
+#run_roc_joint(expression_table_batchRemoved=CAD_molecule_work,ha_molecules=ha_molecules,ddsPLS=top_selected_variables,outputfolder=outputfolder)
+run_roc_joint(expression_table_batchRemoved=CAD_molecule_work,ha_molecules=ha_molecules,ddsPLS=slected_variables_comp,outputfolder=outputfolder)
+
+# Save plot
+Cairo(width = 25.0, height = 25.0, units = 'in', res = 600, file=paste(outputfolder,paste("Corrplot","joint_","splsda.png",sep=""),sep="/"), type="png", bg="white")		
+	corrplot(cor(joint_dataset[,top_selected_variables], method = "pearson", use = "complete.obs"), method = "number",order = "hclust",tl.col = "black",cl.cex=1, col = c("black","darkgrey","#1A1110"), number.cex = 1.3,tl.cex =2,addrect = 5,hclust.method="ward.D2") # Display the correlation coefficient
+dev.off()
+
+############################################################################################
+# Here
+# First, save excel file	
+write.xlsx(df_selection_results, file=paste(outputfolder,"/","Integrative_selection_","Diablo",".xlsx",sep=""), append=FALSE)
+################################################################################################
+group1<-read.xlsx(file=paste(outputfolder,"/","Integrative_selection_","Diablo",".xlsx",sep=""), sheetIndex=1)[,2]
+group2<-read.xlsx(file=paste(outputfolder,"/","Integrative_selection_All_Molecules",".xlsx",sep=""), sheetIndex=1)[,2]
+group3<-read.xlsx(file=paste(outputfolder,"/","Integrative_selection_stepAIC",".xlsx",sep=""), sheetIndex=1)[,1]
+
+# Create models
+splsda=group1
+ddsPLS=group2
+stepAIC=group3
+# All 76 molecules
+all_76_molecules<-c(DE_molecules_microRNA,DE_molecules_biomarker,DE_molecules_metabolites,"DMT2_known","Age","Sex")
+
+all_groups<-unique(c(intersect(as.vector(group2),as.vector(group1)),"DMT2_known","Age","Sex"))
+
+#venn.plot <- venn.diagram(venn_lis_de , , cex = 2, cat.fontface=4, category.names=c("A", "B"), main="Random Gene Lists")	
+library("VennDiagram")
+venn.plot <- venn.diagram(list(Diablo=group1,ddsPLS=group2,stepAIC=group3) ,fill=c("#add8e6", "#FFFFE0","grey"), alpha=c(0.3,0.3,0.3),cex = 2, cat.fontface=4,filename=paste(outputfolder,paste("/VeenDiagram","phenotypes",".png",sep=""),sep=""),imagetype="png")	
+
+# Create merged frame
+merged_df<-rbind(data.frame(Molecules=group1,From="diablo.splsda"),
+data.frame(Molecules=group2,From="ddsPLS"),
+data.frame(Molecules=group3,From="stepAIC"))
+
+# Create results
+df_result<-data.frame()
+
+# for each molecule in 
+for (molecule in names(sort(table(merged_df$Molecules),decreasing = TRUE)))
+{
+		# Text 
+		str_text<-""
+		
+		if (molecule %in% group1) {str_text<-paste(str_text,"splsda",sep="+")}
+		if (molecule %in% group2) {str_text<-paste(str_text,"ddsPLS",sep="+")}
+		if (molecule %in% group3) {str_text<-paste(str_text,"stepAIC",sep="+")}
+		
+		df_result<-rbind(df_result,	data.frame(Molecule=molecule,From=substr(str_text, 2, nchar(str_text))))
+}
+
+	# Print Association Results Patients All Var Info		
+	Cairo(width = dim(df_result)[2]*3.0, height = dim(df_result)[1]*0.35, units = 'in', res = 600, file=paste(outputfolder,"feature_selection_Selected.png",sep="/"), type="png", bg="white")		
+	# Truncate values
+		tab <- ggtexttable(df_result,theme = ttheme("classic",base_size=16),row=NULL)					
+		print(tab)
+	dev.off()	
+
+# First, save excel file	
+write.xlsx(df_result, file=paste(outputfolder,"/","Integrative_selection_","Overlap",".xlsx",sep=""), append=FALSE)
+
+
+slected_variables<-df_result$Molecule 
+run_roc_joint(expression_table_batchRemoved=joint_molecules_logMeanCenter,CAD_molecule_work=joint_molecules_logMeanCenter_work,ha_molecules=ha_molecules,ddsPLS=slected_variables,outputfolder=outputfolder)
+
+# Searched molecules
+molecules<-gsub("`","",df_result$Molecule)
+
+# Replace DMT2 name
+molecules<-molecules[molecules !="DMT2_known" &  molecules !="Age" & molecules !="Sex" ]
+
+# Filter names
+joint_molecules_logMeanCenter<-joint_molecules_logMeanCenter[, molecules]
+
+joint_molecules_logMeanCenter$DMT2<-as.numeric(joint_molecules_logMeanCenter_work[rownames(joint_molecules_logMeanCenter),"DMT2_known"])-1
+joint_molecules_logMeanCenter$Ischemia<-as.numeric(joint_molecules_logMeanCenter_work[rownames(joint_molecules_logMeanCenter),"Ischemia"])-1
+joint_molecules_logMeanCenter$Sex<-as.numeric(joint_molecules_logMeanCenter_work[rownames(joint_molecules_logMeanCenter),"Sex"])-1
+joint_molecules_logMeanCenter$Age<-as.numeric(joint_molecules_logMeanCenter_work[rownames(joint_molecules_logMeanCenter),"Age"])
+joint_molecules_logMeanCenter$BMI<-as.numeric(joint_molecules_logMeanCenter_work[rownames(joint_molecules_logMeanCenter),"BMI"])
+joint_molecules_logMeanCenter$Smoking<-as.numeric(joint_molecules_logMeanCenter_work[rownames(joint_molecules_logMeanCenter),"Smoking_known"])-1
+
+
+# Save plot
+Cairo(width = 20.0, height = 20.0, units = 'in', res = 300, file=paste(outputfolder,paste("Corrplot","joint_","splsda.png",sep=""),sep="/"), type="png", bg="white")		
+	corrplot(cor(joint_molecules_logMeanCenter, method = "pearson", use = "complete.obs"),addrect=10, method = "number",order = "hclust",tl.col = "black",cl.cex=1, col = c("black","darkgrey","#1A1110"), number.cex = 1.3,tl.cex =2) # Display the correlation coefficient
+dev.off()
+################################################################################################
+# Intersection between splsda and ddsPLS
+run_roc_joint(expression_table_batchRemoved=joint_molecules_logMeanCenter,CAD_molecule_work=joint_molecules_logMeanCenter_work,ha_molecules=ha_molecules,ddsPLS=intersect(splsda,ddsPLS),outputfolder=outputfolder)
+ddsPLS=as.vector(group3)
+
+ddsPLS=c("hsa-miR-10a",
+"LDLCholesterin",
+"Cholesterin",
+"HDLCholesterin",
+"SM_C26_1",
+"PC_ae_C34_3",
+"PC_ae_C34_2",
+"SM_C24_0")
+
+
+################################################################################################
+# First, red excel file	
+molecules<-read.xlsx(file=paste(outputfolder,"/","Integrative_selection_","Overlap",".xlsx",sep=""),sheetIndex=1)$Molecule
+
+joint_molecules_logMeanCenter_work$BMI2<-cut(as.numeric(joint_molecules_logMeanCenter_work$Age),include.lowest=TRUE,right=FALSE, breaks=c(quantile(as.numeric(joint_molecules_logMeanCenter_work$Age),na.rm=TRUE, probs = seq(0, 1, by = 0.5))),labels=c("low","high"))
+################################################################################################
+# Age + Sex + BMI + Diabetes + Smoking
+variable="Ischemia"
+
+# Create formula : tested variable ~ age_sampling + bmi_proteo + Sex + Cluster
+#formula.cat=paste("Ischemia + DMT2_known ~ Age + Sex",sep="")
+formula.cat=paste(variable," ~ Age + DMT2_known + Smoking_known + Sex + ",paste(paste0("`", molecules, "`"),collapse=" + "),sep="")
+
+
+
+# Fit lm models
+glm.cat.restraint<-glm(formula=formula.cat,family=binomial(link='logit'), data=joint_molecules_logMeanCenter_work, na.action=na.omit)
+
+which(summary(glm.cat.restraint)$coefficients[,4]<0.05)
+
+
+################################################################################################
+
+################################################################################################
+# Take the log expression of each molecule and put it together
+X_all_76_molecules<-list(microRNA=CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),all_76_molecules)],
+biomarker=CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),all_76_molecules)],
+metabolite=CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),all_76_molecules)],
+Info=df_info)
+
+# Take the log expression of each molecule and put it together
+X_splsda<-list(microRNA=CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),splsda)],
+biomarker=CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),splsda)],
+metabolite=CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),splsda)],
+Info=df_info)
+
+# Take the log expression of each molecule and put it together
+X_ddsPLS<-list(microRNA=CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),ddsPLS)],
+biomarker=CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),ddsPLS)],
+metabolite=CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),ddsPLS)],
+Info=df_info)
+
+# Take the log expression of each molecule and put it together
+X_stepAIC<-list(microRNA=CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),stepAIC)],
+biomarker=CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),stepAIC)],
+metabolite=CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),stepAIC)],
+Info=df_info)
+
+######################################
+# Take the log expression of each molecule and put it together
+# Set data
+Y<-CAD_Patients_Age[ID_intersect,"Ischemia"]
+
+## Save R objects# Save R objects
+saveRDS(X_all_76_molecules, file = paste(outputfolder,paste("X_all_76_molecules","",".rds",sep=""),sep="/"))
+saveRDS(X_splsda, file = paste(outputfolder,paste("X_splsda","",".rds",sep=""),sep="/"))
+saveRDS(X_ddsPLS, file = paste(outputfolder,paste("X_ddsPLS","",".rds",sep=""),sep="/"))
+saveRDS(X_stepAIC, file = paste(outputfolder,paste("X_stepAIC","",".rds",sep=""),sep="/"))
+saveRDS(Y, file = paste(outputfolder,paste("Y","",".rds",sep=""),sep="/"))
+
+# Set info df
+df_info<-data.frame(CAD_Patients_Age[ID_intersect,c("Age","Sex","DMT2_known")])
+
+# Set colnames(df_info)
+rownames(df_info)<-ID_intersect
+
+saveRDS(df_info, file = paste(outputfolder,paste("df_info","",".rds",sep=""),sep="/"))
+
+#X_all_76_molecules<-readRDS(X_all_76_molecules, file = paste(outputfolder,paste("X_all_76_molecules","",".rds",sep=""),sep="/"))
+#X_splsda<-readRDS(file = paste(outputfolder,paste("X_splsda","",".rds",sep=""),sep="/"))
+#X_ddsPLS<-readRDS(file = paste(outputfolder,paste("X_ddsPLS","",".rds",sep=""),sep="/"))
+#X_stepAIC<-readRDS(file = paste(outputfolder,paste("X_stepAIC","",".rds",sep=""),sep="/"))
+#Y<-readRDS(file = paste(outputfolder,paste("Y","",".rds",sep=""),sep="/"))
+X_all_76_molecules<-readRDS(file = "C:/Users/fv2/Documents/X_all_76_molecules.rds")
+X_splsda<-readRDS(file = "C:/Users/fv2/Documents/X_splsda.rds")
+X_ddsPLS<-readRDS(file = "C:/Users/fv2/Documents/X_ddsPLS.rds")
+X_stepAIC<-readRDS(file = "C:/Users/fv2/Documents/X_stepAIC.rds")
+Y<-readRDS(file = "C:/Users/fv2/Documents/Y.rds")
+df_info<-readRDS(file = "C:/Users/fv2/Documents/df_info.rds")[,"DMT2_known"]
+df_info<-data.frame(as.numeric(df_info)-1)
+
+
+######################################
+# Save R objects# Save R objects
+#saveRDS(X, file = paste(outputfolder,paste("Xs","",".rds",sep=""),sep="/"))
+#saveRDS(Y, file = paste(outputfolder,paste("Y","",".rds",sep=""),sep="/"))
+#X<-readRDS(file = "C:/Users/fv2/Documents/Xs.rds")
+#Y<-readRDS(file = "C:/Users/fv2/Documents/Y.rds")
+
+# Save object
+#saveRDS(X, file = paste(outputfolder,paste("X.rds",sep=""),sep="/"))
+#saveRDS(Y, file = paste(outputfolder,paste("Y.rds",sep=""),sep="/"))
+
+#X<-readRDS(file = paste("C:/Users/fv2/Documents/",paste("X.rds",sep=""),sep="/"))
+#Y<-readRDS(file = paste("C:/Users/fv2/Documents/",paste("Y.rds",sep=""),sep="/"))
+
+# Stopped here
+mddsPLS_all_76_molecules <- mddsPLS(Xs=X_all_76_molecules,Y=Y,R=1, L0 = 79,mode = "logit",getVariances=TRUE)
+mddsPLS_ddsPLS <- mddsPLS(Xs=X_ddsPLS,Y=Y,R=1, L0 = 79,mode = "logit",getVariances=TRUE)
+mddsPLS_splsda <- mddsPLS(Xs=X_splsda,Y=Y,R=1, L0 = 79,mode = "logit",getVariances=TRUE)
+mddsPLS_stepAIC <- mddsPLS(Xs=X_stepAIC,Y=Y,R=1, L0 = 79,mode = "logit",getVariances=TRUE)
+
+# Re-generate formula
+formula.all76=paste("Ischemia ~ .",sep="")	
+formula.stepAIC=paste("Ischemia ~ .",sep="")	
+formula.ddsPLS=paste("Ischemia ~ .",sep="")	
+formula.splsda=paste("Ischemia ~ .",sep="")	
+
+# Produce glm model
+glm.splsda<-glm(formula=formula.splsda,family=binomial(link='logit'), data=data.frame(Super=mddsPLS_splsda$mod$T_super[,1],Ischemia=mddsPLS_splsda$Y_0,df_info), na.action=na.omit)	
+glm.ddsPLS<-glm(formula=formula.ddsPLS,family=binomial(link='logit'), data=data.frame(Super=mddsPLS_ddsPLS$mod$T_super[,1],Ischemia=mddsPLS_ddsPLS$Y_0,df_info), na.action=na.omit)
+glm.stepAIC<-glm(formula=formula.stepAIC,family=binomial(link='logit'), data=data.frame(Super=mddsPLS_stepAIC$mod$T_super[,1],Ischemia=mddsPLS_stepAIC$Y_0,df_info), na.action=na.omit)
+glm.all76<-glm(formula=formula.all76,family=binomial(link='logit'), data=data.frame(Super=mddsPLS_all_76_molecules$mod$T_super[,1],Ischemia=mddsPLS_all_76_molecules$Y_0,df_info), na.action=na.omit)
+
+
+# Create list
+roc_molecules<-list()
+roc_names<-list()
+
+
+# Save all rock curve in a list
+roc_molecules[["all"]] <- roc(Ischemia~glm.splsda$fitted.values, data = data.frame(Ischemia=mddsPLS_all_76_molecules$Y_0), plot = FALSE,ci=TRUE)
+roc_molecules[["splsda"]] <- roc(Ischemia~glm.ddsPLS$fitted.values, data = data.frame(Ischemia=mddsPLS_splsda$Y_0), plot = FALSE,ci=TRUE)	
+roc_molecules[["ddsPLS"]] <- roc(Ischemia~glm.stepAIC$fitted.values, data = data.frame(Ischemia=mddsPLS_ddsPLS$Y_0), plot = FALSE,ci=TRUE)
+roc_molecules[["stepAIC"]] <- roc(Ischemia~glm.all76$fitted.values, data = data.frame(Ischemia=mddsPLS_stepAIC$Y_0), plot = FALSE,ci=TRUE)
+
+# Calculate CI
+CI.splsda<-round(as.vector(roc_molecules[["splsda"]]$ci),3)	
+CI.ddsPLS<-round(as.vector(roc_molecules[["ddsPLS"]]$ci),3)	
+CI.stepAIC<-round(as.vector(roc_molecules[["stepAIC"]]$ci),3)	
+CI.all76<-round(as.vector(roc_molecules[["all"]]$ci),3)	
+
+# Save name of full model
+roc_names[["all"]] <-paste("all AUC=",CI.all76[2]," 95%CI=",CI.all76[1],"-",CI.all76[3],sep="")
+roc_names[["ddsPLS"]] <-paste("ddsPLS AUC=",CI.ddsPLS[2]," 95%CI=",CI.ddsPLS[1],"-",CI.ddsPLS[3],sep="")
+roc_names[["splsda"]] <-paste("splsda AUC=",CI.splsda[2]," 95%CI=",CI.splsda[1],"-",CI.splsda[3],sep="")
+roc_names[["stepAIC"]] <-paste("stepAIC AUC=",CI.stepAIC[2]," 95%CI=",CI.stepAIC[1],"-",CI.stepAIC[3],sep="")
+
+
+	# Create first plot
+	names(roc_molecules)<-roc_names
+		
+	colors<-c(colorblind_pal()(8)[1:4])
+	#colors=c("#000000","#E69F00","#56B4E9","#009E73")
+	#names(colors)<-c("ddsPLS.selection","microRNA.selection","metabolite.selection","biomarker.selection","info.selection")
+	
+	C<-ggroc(roc_molecules)+ geom_line()+ theme_bw()+ ggtitle("ROC curve analysis") + theme(legend.position = c(0.70, 0.3), legend.background = element_rect(color = NA,fill = NA, size = 1, linetype = "solid"))+theme(legend.title = element_blank())+ scale_color_manual(values = colors)
+	C
+		 
+	# Corrlation plot
+	datalayer="_ROC"
+	file = "C:/Users/fv2/Documents/ROC_Curve_plot.png"
+	#print(paste(outputfolder,"/",paste("ROC_Curve_plot_",datalayer,sep=""),".png",sep=""))
+	#Cairo(width = 5, height = 5, units = 'in', res = 600, file=file, type="png", bg="white")		
+	png(width = 5, height = 5, units = 'in', res = 600, file=file)		
+			print(C)
+	dev.off()	
+	
+
+
+################################################################################################
+# Take the log expression of each molecule and put it together
+X_all_76_molecules<-list(microRNA=CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),all_76_molecules)],
+biomarker=CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),all_76_molecules)],
+metabolite=CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),all_76_molecules)],
+Info=df_info)
+
+# Take the log expression of each molecule and put it together
+X_splsda<-list(microRNA=CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),splsda)],
+biomarker=CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),splsda)],
+metabolite=CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),splsda)],
+Info=df_info)
+
+# Take the log expression of each molecule and put it together
+X_ddsPLS<-list(microRNA=CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),ddsPLS)],
+biomarker=CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),ddsPLS)],
+metabolite=CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),ddsPLS)],
+Info=df_info)
+
+# Take the log expression of each molecule and put it together
+X_stepAIC<-list(microRNA=CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),stepAIC)],
+biomarker=CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),stepAIC)],
+metabolite=CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),stepAIC)],
+Info=df_info)
+	
+	
+write.xlsx(table.all76, file=paste(outputfolder,"/","Integrative_selection_","stepAIC",".xlsx",sep=""),sheetName="all76", append=FALSE)
+write.xlsx(table.stepAIC, file=paste(outputfolder,"/","Integrative_selection_","stepAIC",".xlsx",sep=""),sheetName="stepAIC", append=TRUE)
+write.xlsx(table.ddsPLS, file=paste(outputfolder,"/","Integrative_selection_","stepAIC",".xlsx",sep=""),sheetName="ddsPLS", append=TRUE)
+write.xlsx(table.splsda, file=paste(outputfolder,"/","Integrative_selection_","stepAIC",".xlsx",sep=""),sheetName="splsda", append=TRUE)
+
+table.all76<-read.xlsx( file=paste(outputfolder,"/","Integrative_selection_","stepAIC",".xlsx",sep=""),sheetName="all76", append=FALSE)
+table.stepAIC<-write.xlsx(, file=paste(outputfolder,"/","Integrative_selection_","stepAIC",".xlsx",sep=""),sheetName="stepAIC", append=TRUE)
+table.ddsPLS<-write.xlsx(, file=paste(outputfolder,"/","Integrative_selection_","stepAIC",".xlsx",sep=""),sheetName="ddsPLS", append=TRUE)
+table.splsda<-write.xlsx(, file=paste(outputfolder,"/","Integrative_selection_","stepAIC",".xlsx",sep=""),sheetName="splsda", append=TRUE)
+
+################################################################################################
+# Take the log expression of each molecule and put it together
+X_all_76_molecules<-list(microRNA=CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),gsub("`","",rownames(table.all76)))],
+biomarker=CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),rownames(table.all76))],
+metabolite=CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),rownames(table.all76))],
+Info=df_info)
+
+# Take the log expression of each molecule and put it together
+X_splsda<-list(microRNA=CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),gsub("`","",rownames(table.splsda)))],
+biomarker=CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),rownames(table.splsda))],
+metabolite=CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),rownames(table.splsda))],
+Info=df_info)
+
+# Take the log expression of each molecule and put it together
+X_ddsPLS<-list(microRNA=CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),gsub("`","",rownames(table.ddsPLS)))],
+biomarker=CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),rownames(table.ddsPLS))],
+metabolite=CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),rownames(table.ddsPLS))],
+Info=df_info)
+
+# Take the log expression of each molecule and put it together
+X_stepAIC<-list(microRNA=CAD_microRNAs_log[ID_intersect,intersect(colnames(CAD_microRNAs_log),gsub("`","",rownames(table.stepAIC)))],
+biomarker=CAD_Biomarkers_log[ID_intersect,intersect(colnames(CAD_Biomarkers_log),rownames(table.stepAIC))],
+metabolite=CAD_Metabolites_log[ID_intersect,intersect(colnames(CAD_Metabolites_log),rownames(table.stepAIC))],
+Info=df_info)
+	
+	X_all_76_molecules[[4]]<-df_info
+	X_splsda[[4]]<-df_info
+	X_ddsPLS[[4]]<-df_info
+	X_stepAIC[[4]]<-df_info
+	
+	# Re-generate formula
+	X_splsda[[2]]<-data.frame(Pro_BNP=X_splsda[[2]])
+	
+	
+
+# Create models
+# Produce glm model
+splsda=rownames(table.splsda)[!rownames(table.splsda) %in%c("Age","Sex")]
+ddsPLS=rownames(table.ddsPLS)[!rownames(table.ddsPLS)%in%c("Age","Sex")]
+stepAIC=rownames(table.stepAIC)[!rownames(table.stepAIC)%in%c("Age","Sex")]
+all76=rownames(table.all76)[!rownames(table.all76) %in% c("Age","Sex")]
+
+
+#venn.plot <- venn.diagram(venn_lis_de , , cex = 2, cat.fontface=4, category.names=c("A", "B"), main="Random Gene Lists")	
+library("VennDiagram")
+venn.plot <- venn.diagram(list(All=all76,stepAIC=stepAIC,ddsPLS=ddsPLS,splsda=splsda) ,fill=c("#add8e6", "#FFFFE0","grey","orange"), alpha=c(0.3,0.3,0.3,0.3),cex = 2, cat.fontface=4,filename=paste(outputfolder,paste("/VeenDiagram","phenotypes",".png",sep=""),sep=""),imagetype="png")	
+
+# Create merged frame
+merged_df<-rbind(data.frame(Molecules=splsda,From="splsda"),
+data.frame(Molecules=ddsPLS,From="ddsPLS"),
+data.frame(Molecules=stepAIC,From="stepAIC"),
+data.frame(Molecules=all76,From="all76"))
+
+# Create results
+df_result<-data.frame()
+
+# for each molecule in 
+for (molecule in names(sort(table(merged_df$Molecules),decreasing = TRUE)))
+{
+		# Text 
+		str_text<-""
+		
+		if (molecule %in% all76) {str_text<-paste(str_text,"All",sep="+")}
+		if (molecule %in% splsda) {str_text<-paste(str_text,"splsda",sep="+")}
+		if (molecule %in% ddsPLS) {str_text<-paste(str_text,"ddsPLS",sep="+")}
+		if (molecule %in% stepAIC) {str_text<-paste(str_text,"stepAIC",sep="+")}
+		
+		
+		df_result<-rbind(df_result,	data.frame(Molecule=molecule,From=substr(str_text, 2, nchar(str_text))))
+}
+
+	# Print Association Results Patients All Var Info		
+	Cairo(width = dim(df_result)[2]*3.0, height = dim(df_result)[1]*0.35, units = 'in', res = 600, file=paste(outputfolder,"feature_selection_Selected.png",sep="/"), type="png", bg="white")		
+	# Truncate values
+		tab <- ggtexttable(df_result,theme = ttheme("classic",base_size=16),row=NULL)					
+		print(tab)
+	dev.off()
+
+
+
+	# Print Association Results Patients All Var Info		
+	Cairo(width = dim(summary(glm.ddsPLS)$coefficient)[2]*3.0, height = dim(summary(glm.ddsPLS)$coefficient	)[1]*0.35, units = 'in', res = 600, file=paste(outputfolder,"table_selection_Selected.png",sep="/"), type="png", bg="white")		
+	# Truncate values
+		tab <- ggtexttable(round(summary(glm.ddsPLS)$coefficient,5)	,theme = ttheme("classic",base_size=16))					
+		print(tab)
+	dev.off()
+
+# First, save excel file	
+write.xlsx(df_result, file=paste(outputfolder,"/","Integrative_selection_","Overlap_stepAIC",".xlsx",sep=""), append=FALSE)	
+
+
+
+signature_biomarkers<-c("hsTroponinI","HDLCholesterin","LDLCholesterin","Glucose")
+signature_biomarkers_plus_correction<-c("Age","Sex","hsTroponinI","HDLCholesterin","LDLCholesterin","Glucose","DMT2:Insulin")
+
+signature_metabolites<-c("PC_aa_C32_3","PC_aa_C36_6","PC_aa_C38_4","PC_ae_C32_1","PC_ae_C32_2","PC_ae_C34_3","PC_ae_C36_1","PC_ae_C36_5","PC_ae_C40_2","lysoPC_a_C18_1","lysoPC_a_C18_2","SM_OH_C16_1","SM_C26_1")
+signature_metabolites_plus_correction<-c("Age","Sex","DMT2","PC_aa_C32_3","PC_aa_C36_6","PC_aa_C38_4","PC_ae_C32_1","PC_ae_C32_2","PC_ae_C34_3","PC_ae_C36_1","PC_ae_C36_5","PC_ae_C40_2","lysoPC_a_C18_1","lysoPC_a_C18_2","SM_OH_C16_1","SM_C26_1")
+
+signature_microRNA<-c("hsa-miR-10a","hsa-miR-183","hsa-miR-1274b")
+signature_microRNA_plus_correction<-c("Age","Sex","hsa-miR-10a","hsa-miR-183","hsa-miR-1274b","Sex:hsa-miR-146-5p")
+
+signature1<-c("DMT2","hsTroponinI","HDLCholesterin","LDLCholesterin","Glucose","hsa-miR-10a","hsa-miR-183","hsa-miR-1274b","PC_aa_C32_3","PC_aa_C36_6","PC_aa_C38_4","PC_ae_C32_1","PC_ae_C32_2","PC_ae_C34_3","PC_ae_C36_1","PC_ae_C36_5","PC_ae_C40_2","lysoPC_a_C18_1","lysoPC_a_C18_2","SM_OH_C16_1","SM_C26_1")
+signature1_plus_all_interaction<-c("Age","Sex","DMT2","hsTroponinI","HDLCholesterin","LDLCholesterin","Glucose","hsa-miR-10a","hsa-miR-183","hsa-miR-1274b","PC_aa_C32_3","PC_aa_C36_6","PC_aa_C38_4","PC_ae_C32_1","PC_ae_C32_2","PC_ae_C34_3","PC_ae_C36_1","PC_ae_C36_5","PC_ae_C40_2","lysoPC_a_C18_1","lysoPC_a_C18_2","SM_OH_C16_1","SM_C26_1","Sex:hsa-miR-146b-5p","DMT2:SM_C24_1","DMT2:Insulin","Sex:Smoking")
+
+signature2<-c("PC_ae_C42_2","SM_OH_C14_1","SM_OH_C22_2","PC_aa_C28_1","hsa-miR-500b","hsa-miR-146b-5p","PC_ae_C38_6","PC_ae_C36_2","hsa-miR-335","hsa-miR-1274b","C12_1","Pro_BNP","DMT2","Glucose","PC_ae_C36_3","hsTroponinI","PC_aa_C32_3","SM_C26_0","PC_ae_C32_2","lysoPC_a_C18_2","Hexose","hsa-miR-212","SM_OH_C24_1","SM_OH_C22_1","SM_C24_0","PC_ae_C34_2","PC_ae_C34_3","HDLCholesterin","Cholesterin","SM_C26_1","hsa-miR-10a","LDLCholesterin")
+signature2_plus_all_interaction<-c("Age","Sex","DMT2","PC_ae_C42_2","SM_OH_C14_1","SM_OH_C22_2","PC_aa_C28_1","hsa-miR-500b","hsa-miR-146b-5p","PC_ae_C38_6","PC_ae_C36_2","hsa-miR-335","hsa-miR-1274b","C12_1","Pro_BNP","DMT2","Glucose","PC_ae_C36_3","hsTroponinI","PC_aa_C32_3","SM_C26_0","PC_ae_C32_2","lysoPC_a_C18_2","Hexose","hsa-miR-212","SM_OH_C24_1","SM_OH_C22_1","SM_C24_0","PC_ae_C34_2","PC_ae_C34_3","HDLCholesterin","Cholesterin","SM_C26_1","hsa-miR-10a","LDLCholesterin","Sex:hsa-miR-146b-5p","DMT2:SM_C24_1","DMT2:Insulin","Sex:Smoking")
+
+signature3<-c("PC_ae_C34_2","PC_ae_C34_3","HDLCholesterin","Cholesterin","SM_C26_1","hsa-miR-10a","LDLCholesterin")
+signature3_plus_all_interaction<-c("Age","Sex","PC_ae_C34_2","PC_ae_C34_3","HDLCholesterin","Cholesterin","SM_C26_1","hsa-miR-10a","LDLCholesterin","Sex:hsa-miR-146b-5p","DMT2:SM_C24_1","DMT2:Insulin","Sex:Smoking")
+
+signature4<-c("hsa-miR-660","hsa-miR-502-5p","hsa-miR-1914*","hsa-miR-183","hsa-miR-500b","hsa-miR-146b-5p","hsa-miR-335","hsa-miR-1274b","hsa-miR-212","hsa-miR-10a","CRP","Insulin","Pro_BNP","hsTroponinI","C12_1","lysoPC_a_C18_2","SM_OH_C24_1","SM_OH_C22_1","SM_C24_0","PC_ae_C34_2","PC_ae_C34_3","SM_C26_1","DMT2")
+signature4_plus_all_interaction<-c("hsa-miR-660","hsa-miR-502-5p","hsa-miR-1914*","hsa-miR-183","hsa-miR-500b","hsa-miR-146b-5p","hsa-miR-335","hsa-miR-1274b","hsa-miR-212","hsa-miR-10a","CRP","Insulin","Pro_BNP","hsTroponinI","C12_1","lysoPC_a_C18_2","SM_OH_C24_1","SM_OH_C22_1","SM_C24_0","PC_ae_C34_2","PC_ae_C34_3","SM_C26_1","DMT2","Sex:hsa-miR-146b-5p","DMT2:SM_C24_1","DMT2:Insulin","Sex:Smoking")
+
+# Interactions
+interacton<-c("Sex:hsa-miR-146b-5p","DMT2:SM_C24_1","DMT2:Insulin","Sex:Smoking")
+
+# Merge
+all_variables1<-unique(c(signature_biomarkers,signature_microRNA,signature_metabolites,signature1,signature2,signature3,signature4))
+all_variables<-unique(c(signature_biomarkers,signature_microRNA,signature_metabolites,signature1,signature2,signature3,signature4))
+
+# Complete all variables
+all_variables<-c(all_variables[all_variables!="DMT2"],"DMT2",interacton)
+all_variables1.plus.interacttion<-c(all_variables[all_variables!="DMT2"],"DMT2",interacton)
+
+# Take the the signatures 
+merged_signatures<-rbind(Signature.Biomarkers=c(all_variables %in% signature_biomarkers),
+Signature.Biomarkers.plus.Interaction=c(all_variables %in% signature_biomarkers_plus_correction),
+Signature.Metabolites=c(all_variables %in% signature_metabolites),
+Signature.Metabolites.plus.Interaction=c(all_variables %in% signature_metabolites_plus_correction),
+Signature.microRNA=c(all_variables %in% signature_microRNA),
+Signature.microRNA.plus.Interaction=c(all_variables %in% signature_microRNA_plus_correction),
+Signature.1=c(all_variables %in% signature1),
+Signature.1.plus.Interaction=c(all_variables %in% signature1_plus_all_interaction),
+Signature.2=c(all_variables %in% signature2),
+Signature.2.plus.Interaction=c(all_variables %in% signature2_plus_all_interaction),
+Signature.3=c(all_variables %in% signature3),
+Signature.3.plus.Interaction=c(all_variables %in% signature3_plus_all_interaction),
+Signature.4=c(all_variables %in% signature4),
+Signature.4.plus.Interaction=c(all_variables %in% signature4_plus_all_interaction),
+Intersect=c(all_variables %in% intersect(signature2,signature4)),
+Intersect.plus.Interaction=c(all_variables %in% c(intersect(signature2,signature4),interacton)),
+Union=c(all_variables %in% all_variables1),
+Union.plus.interaciont=c(all_variables %in% all_variables1.plus.interacttion))
+
+# Set colnames
+colnames(merged_signatures)<-all_variables
+
+#write.xlsx(merged_signatures, file=paste(outputfolder,"/","Integrative_summary_","All_Molecules",".xlsx",sep=""), append=FALSE)
+
+# Read the formatted header
+# here
+expression_table_batchRemoved=joint_molecules_logMeanCenter
+CAD_molecule_work=joint_molecules_logMeanCenter_work
+outputfolder=outputfolder
+
+# Read exdce
+header<-read.xlsx(file=paste(outputfolder,"/","Integrative_summary_","All_Molecules",".xlsx",sep=""),sheetIndex=1,check.names =FALSE)
+
+# Colnames
+colnames(header)[1]<-c("Signature")
+
+# Merge files
+merged_signatures<-header#[1:18,]
+
+# Include rownames
+rownames(merged_signatures)<-merged_signatures$Signature
+
+# Convert to numeric
+merged_signatures$AUC<-as.numeric(as.vector(merged_signatures$AUC))
+
+# Sort by AUC
+merged_signatures<-merged_signatures[order(merged_signatures$AUC),]
+
+# Only variabales
+roc_molecules<-list()
+library("PredictABEL")
+
+# For each signature
+for (signature in rownames(merged_signatures))
+{
+	# Print the name of the signature
+	print(signature)
+	
+	# Take the molecules belonging to that signature	
+	variable_signature<-colnames(merged_signatures)[which(merged_signatures[signature,]=="+")]
+	
+	# Take only variables
+	biomolecules<-variable_signature[variable_signature %in% colnames(expression_table_batchRemoved)]
+	
+	# Verify if includes DMT2
+	adjustment_DMT2<-sum(grepl("DMT2", variable_signature))
+	
+	# Verify if includes Smoking
+	adjustment_Smoking<-sum(grepl("Smoking", variable_signature))	
+	
+	# Verify if includes any of the four interactions
+	interaction_first<-sum(grepl("Sex:Smoking", variable_signature))	
+	interaction_second<-sum(grepl("DMT2:Insulin", variable_signature))	
+	interaction_third<-sum(grepl("DMT2:SM_C24_1", variable_signature))	
+	interaction_fourth<-sum(grepl("Sex:hsa-miR-146b-5p", variable_signature))	
+	
+	#formula.full=paste("Ischemia ~ Sex + ",paste(colnames(CAD_Biomarkers),collapse=" + "),sep="")		
+	formula.full=paste("Ischemia ~ Age + Sex + ",paste(paste0("`", biomolecules, "`"),collapse=" + "),sep="")
+	formula.base=paste("Ischemia ~ Age + Sex",sep="")
+	
+	# If adjusted adjustment_DMT2
+	if(adjustment_DMT2>0)	
+	{
+			# Add to formula
+			formula.full=paste(formula.full,"DMT2_known",sep="+")
+	}
+	# If adjusted adjustment_DMT2
+	if(interaction_first>0)	
+	{
+			# Add to formula
+			formula.full=paste(formula.full,"Smoking_known + Sex*Smoking_known",sep="+")
+	}	
+	# If adjusted adjustment_DMT2
+	if(interaction_second>0)	
+	{
+			# Add to formula
+			formula.full=paste(formula.full,"DMT2_known + Insulin + Insulin*DMT2_known",sep="+")
+	}
+		# If adjusted adjustment_DMT2
+	if(interaction_third>0)	
+	{
+			# Add to formula
+			formula.full=paste(formula.full,"DMT2_known + SM_C24_1 + DMT2_known*SM_C24_1",sep="+")
+	}
+	# If adjusted adjustment_DMT2
+	if(interaction_fourth>0)	
+	{
+			# Add to formula
+			formula.full=paste(formula.full,"`hsa-miR-146b-5p` + Sex*`hsa-miR-146b-5p`",sep="+")
+	}
+	CAD_molecule_work_sub<-CAD_molecule_work[,c(biomolecules,"Age","Sex","DMT2_known","Smoking_known","Ischemia")]
+
+	# Run glm
+	glm.full<-glm(formula=formula.full,family=binomial(link='logit'), data=CAD_molecule_work_sub, na.action=na.omit)
+	glm.base<-glm(formula=formula.base,family=binomial(link='logit'), data=CAD_molecule_work_sub, na.action=na.omit)
+
+	# Add to list
+	roc_molecules[[signature]] <- roc(Ischemia~glm.full$fitted.values, data = CAD_molecule_work, plot = FALSE,ci=TRUE)
+	
+	CAD_molecule_work_sub$Ischemia<-as.numeric(CAD_molecule_work_sub$Ischemia)-1
+
+	reclassification(data=CAD_molecule_work_sub, which(colnames(CAD_molecule_work_sub)=="Ischemia"), predrisk1=predRisk(glm.base), predrisk2=predRisk(glm.full), cutoff=c(0,0.1,0.3,1))
+
+
+}
+#############################################
+# Experimental
+index_table<-read.xlsx(file=paste(outputfolder,"/","Integrative_summary_","All_Molecules",".xlsx",sep=""),sheetIndex=2,check.names =FALSE)#[1:18,]
+
+# Vector names
+vc_roc_names<-c()
+
+# New computed AUC
+index_table$AUC<-0
+index_table$AUC_CI<-0
+
+
+# Save new names for roc curve 
+for (signature in names(roc_molecules))
+	
+{	
+	# Calculate CI
+	CI<-round(as.vector(roc_molecules[[signature]]$ci),3)	
+		
+
+	# Calculate CI
+	CI<-round(as.vector(roc_molecules[[signature]]$ci),3)	
+		
+	# Save name of full model
+	AUC<-paste("AUC=",CI[2]," 95%CI=",CI[1],"-",CI[3],sep="")	
+	
+	# Save names
+	vc_roc_names<-c(vc_roc_names,paste(signature,AUC))	
+	
+	index_table[which(rownames(index_table)==signature),"AUC"]<-CI[2]
+	index_table[which(rownames(index_table)==signature),"AUC_CI"]<-AUC
+}
+# Redraw names
+names(roc_molecules)<-vc_roc_names
+ 
+write.xlsx(index_table, file="/home/flealvalentim/data/LDL_C12_summary_stepWiseComparisson.xlsx", append=FALSE)
+#############################################	
+# For each signature
+# For each entry in roc_molecules
+# Set the comparisson
+comparisson_term1<-0
+comparisson_term2<-comparisson_term1+1
+CAD_molecule_work
+# Set data.frame with results
+df_results<-data.frame()
+
+for (signature in names(roc_molecules))
+{	
+	# Calculate CI
+	CI<-round(as.vector(roc_molecules[[signature]]$ci),3)	
+		
+
+	# Calculate CI
+	CI<-round(as.vector(roc_molecules[[signature]]$ci),3)	
+		
+	# Save name of full model
+	AUC<-paste("AUC=",CI[2]," 95%CI=",CI[1],"-",CI[3],sep="")	
+	
+	# Set the comparisson
+	# if first comparisson
+	if(comparisson_term1==0)
+	{
+		# Compare the first with the last
+		p_value<-roc.test(roc_molecules[[comparisson_term1+1]],roc_molecules[[length(roc_molecules)]])$p.value
+		
+		# Compare the first with the last
+		comparison<-paste(comparisson_term1,"-",length(roc_molecules),sep="")
+	}else
+	{
+	
+		# Compare the first with the last
+		p_value<-roc.test(roc_molecules[[comparisson_term1]],roc_molecules[[comparisson_term2]])$p.value
+		
+		# Compare the first with the last
+		comparison<-paste(comparisson_term1,"-",comparisson_term2,sep="")	
+	
+	}		
+	# Re-set comparisson
+	comparisson_term1<-comparisson_term1+1
+	comparisson_term2<-comparisson_term1+1
+	
+	# Bind results
+	df_results<-rbind(df_results,data.frame(Signature=signature,AUC=AUC,Comparison=comparison,pvalue=p_value))
+	
+}
+
+write.xlsx(df_results, file=paste(outputfolder,"/","Integrative_summary_","stepWiseComparisson",".xlsx",sep=""), append=FALSE)
+##########################################################################
+exp_dataset<-joint_molecules_logMeanCenter[,colnames(header)[which(colnames(header) %in% colnames(joint_molecules_logMeanCenter) )]]
+		
+# Save plot
+Cairo(width = 25, height = 25, units = 'in', res = 600, file=paste(outputfolder,"/","Integrative_summary_","correlation",".png",sep=""), type="png", bg="white")		
+	corrplot(cor(exp_dataset, method = "pearson", use = "complete.obs"), method = "number",order = "hclust",tl.col = "black",cl.cex=1, col = c("black","darkgrey","darkgrey","#1A1110"), number.cex = 1.0,tl.cex =1.5,hclust.method="ward.D2") # Display the correlation coefficient
+dev.off()
+
+##########################################################################
+exp_dataset<-joint_molecules_logMeanCenter[,colnames(header)[which(colnames(header) %in% colnames(joint_molecules_logMeanCenter) )]]
+
+
+library(randomForest)
+
+# Merge tables
+exp_dataset<-merge(data.frame(exp_dataset,ID=rownames(exp_dataset)),data.frame(CAD_Patients_Age[,c("Ischemia","Sex","Age","DMT2_known")],ID=rownames(CAD_Patients_Age)),by="ID")
+
+# Set rownames(CAD_Biomarkers_work)
+rownames(exp_dataset)<-as.vector(exp_dataset$ID)
+
+# Remove col ID
+exp_dataset<-exp_dataset[,-c(1)]
+
+# Repalce colnames
+colnames(exp_dataset)<-gsub("\\*","b",gsub("\\-","_",colnames(exp_dataset)))
+
+# Calculate randomForest
+randomForest_all<-randomForest(formula=as.formula(paste("Ischemia ~ ", paste0(as.vector(colnames(exp_dataset)[!colnames(exp_dataset) %in% c("Ischemia")]),collapse=" + "))), data=exp_dataset,importance=TRUE)
+
+# Take data.frame
+df_all_results<-data.frame()
+
+# Set colulns results
+df_col_results<-data.frame(Var=rownames(randomForest_all$importance))
+
+# Plot variable importance of all variables
+df_all_variables<-data.frame(Sig="All",var=rownames(randomForest_all$importance),MeanDecreaseAccuracy=randomForest_all$importance[,"MeanDecreaseAccuracy"])
+
+df_col_results<-cbind("All"=df_col_results,randomForest_all$importance[,"MeanDecreaseAccuracy"])
+
+# Merge data.frame
+df_all_results<-rbind(df_all_results,df_all_variables)
+
+# Read exdce
+header<-read.xlsx(file=paste(outputfolder,"/","Integrative_summary_","All_Molecules",".xlsx",sep=""),sheetIndex=1,check.names =FALSE)
+
+# Colnames
+colnames(header)[1]<-c("Signature")
+
+# Merge files
+merged_signatures<-header
+
+# Include rownames
+rownames(merged_signatures)<-merged_signatures$Signature
+
+# Convert to numeric
+merged_signatures$AUC<-as.numeric(as.vector(merged_signatures$AUC))
+
+# Sort by AUC
+#merged_signatures<-merged_signatures[order(merged_signatures$AUC),]
+
+# Only variabales
+roc_molecules<-list()
+
+# Read exdce
+sig_names<-read.xlsx(file=paste(outputfolder,"/","Integrative_summary_","All_Molecules",".xlsx",sep=""),sheetIndex=3,check.names =FALSE,header=FALSE)
+
+# For each signature
+for (signature in rownames(merged_signatures))
+{
+	# Print the name of the signature
+	print(signature)
+	
+	# Take the molecules belonging to that signature	
+	variable_signature<-colnames(merged_signatures)[which(merged_signatures[signature,]=="+")]
+	
+	# Take only variables
+	biomolecules<-variable_signature[variable_signature %in% colnames(expression_table_batchRemoved)]
+	
+	# Take table	
+	exp_dataset<-joint_molecules_logMeanCenter[,biomolecules[which(biomolecules %in% colnames(joint_molecules_logMeanCenter) )]]
+	
+	# Merge tables
+	exp_dataset<-merge(data.frame(exp_dataset,ID=rownames(exp_dataset)),data.frame(CAD_Patients_Age[,c("Ischemia","Sex","Age","DMT2_known")],ID=rownames(CAD_Patients_Age)),by="ID")
+
+	# Set rownames(CAD_Biomarkers_work)
+	rownames(exp_dataset)<-as.vector(exp_dataset$ID)
+
+	# Remove col ID
+	exp_dataset<-exp_dataset[,-c(1)]
+
+	# Repalce colnames
+	colnames(exp_dataset)<-gsub("\\*","b",gsub("\\-","_",colnames(exp_dataset)))
+
+	# Calculate randomForest
+	randomForest_sig<-randomForest(formula=as.formula(paste("Ischemia ~ ", paste0(as.vector(colnames(exp_dataset)[!colnames(exp_dataset) %in% c("Ischemia")]),collapse=" + "))), data=exp_dataset,importance=TRUE)	
+	
+	# Plot variable importance of all variables
+	df_sig_variables<-data.frame(Sig=as.vector(sig_names[as.numeric(signature),2]),var=rownames(randomForest_all$importance),MeanDecreaseAccuracy=NA)
+	
+	# Set rownames
+	rownames(df_sig_variables)<-rownames(randomForest_all$importance)	
+	
+	# Set values
+	df_sig_variables[rownames(randomForest_sig$importance),"MeanDecreaseAccuracy"]<-randomForest_sig$importance[,"MeanDecreaseAccuracy"]
+	
+	
+	df_col_results<-cbind(df_col_results,df_sig_variables[,"MeanDecreaseAccuracy"])
+	
+	# Merge data.frame
+	df_all_results<-rbind(df_all_results,df_sig_variables)	
+
+}	
+
+# Set colnames
+colnames(df_col_results)<-c(c("Var","All"),as.vector(sig_names[,2]))
+
+# Set rownames
+rownames(df_col_results)<-df_col_results$Var
+
+# Remove first column
+df_col_results<-df_col_results[,-c(1)]
+
+
+# Filter in only with no interaction
+df_col_results<-df_col_results[,which(!grepl("with" , colnames(df_col_results))),]
+
+# Remove space from colnames
+colnames(df_col_results)<-gsub(",",".",gsub(" ",".",colnames(df_col_results)))
+
+# Remove further
+df_col_results<-df_col_results[,!colnames(df_col_results) %in% c("Biomarkers","Metabolites","microRNA","Overlap.Sig..2.4")]
+
+# Remove space from colnames
+colnames(df_col_results)<-gsub("on.multiblock","mb",colnames(df_col_results))
+
+
+# Save plot
+Cairo(width = 10, height = 10, units = 'in', res = 600, file=paste(outputfolder,"/","Scatter","_matrix",".png",sep=""), type="png", bg="white")		
+	# Basic Scatterplot Matrix
+	pairs( var = rownames(df_col_results),as.formula(c("~ ",paste(colnames(df_col_results),collapse=" + " ))),data=df_col_results, main="MeanDecreaseAccuracy")
+dev.off()	
+
+
+# Filter in only with no interaction
+df_all_results<-df_all_results[which(!grepl("with" , df_all_results$Sig)),]
+
+# Remove space from colnames
+df_all_results$Sig<-gsub(",",".",gsub(" ",".",df_all_results$Sig))
+
+# Remove further
+df_all_results<-df_all_results[!df_all_results$Sig %in% c("Biomarkers","Metabolites","microRNA","Overlap.Sig..2.4"),]
+
+# Remove space from colnames
+df_all_results$Sig<-gsub("on.multiblock","mb",df_all_results$Sig)
+
+# Re-level
+df_all_results$Sig<-factor(df_all_results$Sig,level=c(colnames(df_col_results)))
+
+# Save plot
+Cairo(width = 9.0, height = 10, units = 'in', res = 600, file=paste(outputfolder,"/","VarImportance","_all",".png",sep=""), type="png", bg="white")		
+	ggplot(df_all_results, aes(x = factor(var), y = MeanDecreaseAccuracy))+ geom_point()	+ facet_grid(Sig ~ .) + theme(axis.text.x = element_text(angle = 90, hjust = 1))+  theme(strip.text.y = element_text(angle = 0))
+dev.off()
+
+##########################################################################################################################################
+combinations<-combn(colnames(df_col_results), 2)
+
+# For each pairwise combination
+for (index_comb in 1:dim(combinations)[2])
+{
+	# Take the comparing pair
+	a_comb<-combinations[1,index_comb]
+	b_comb<-combinations[2,index_comb]
+	
+	# Select the columns
+	df_col_results_filtered<-df_col_results[,c(a_comb,b_comb)]
+	
+	# Remove na
+	df_col_results_filtered <-  df_col_results_filtered[complete.cases(df_col_results_filtered), ]
+	
+	# Rename the coluln
+	colnames(df_col_results_filtered)<-c("x","y")
+	
+	# Remove age and sex
+	df_col_results_filtered<-df_col_results_filtered[which(!rownames(df_col_results_filtered) %in% c("Age","Sex")),]
+	
+	# Scaled variable importance
+	df_col_results_scaled<-data.frame(x=(scale(df_col_results_filtered$x,center=FALSE)),y=scale(df_col_results_filtered$y,center=FALSE))
+	
+	# Set rownames
+	rownames(df_col_results_scaled)<-rownames(df_col_results_filtered)
+	
+	# Compute distance
+	df_col_results_scaled<-data.frame(df_col_results_scaled,dist=abs(df_col_results_scaled$x - df_col_results_scaled$y) / sqrt(2))
+	
+	# Add label
+	df_col_results_scaled$Label=""
+	
+	# Set the threshold
+	threshold<-0.5
+	
+	# Set file name
+	filename=paste(outputfolder,"/",paste(gsub("\\.","",a_comb),gsub("\\.","",b_comb),sep="_"),"_VarImportance","_comp",".png",sep="")
+	
+	# If at one is true
+	if(sum(df_col_results_scaled$dist>threshold)>0)
+	{
+	
+		# If distance greater than threshold
+		df_col_results_scaled[which(df_col_results_scaled$dist>threshold),"Label"]<-TRUE
+	
+		# Set labels
+		df_col_results_scaled[which(df_col_results_scaled$Label=="TRUE"),"Label"]<-rownames(df_col_results_scaled)[which(df_col_results_scaled$Label=="TRUE")]
+		
+		print(filename)
+	
+		# Set limit
+		limit<-ceiling(max(abs(min(c(df_col_results_scaled$x,df_col_results_scaled$y))),abs(max(c(df_col_results_scaled$x,df_col_results_scaled$y)))))
+		
+		# Save plot
+		Cairo(width = 3.0, height = 3, units = 'in', res = 600, file=filename, type="png", bg="white")		
+			print(ggplot(df_col_results_scaled, aes(x = x, y = y, label = Label)) +   geom_point() +  xlim(-limit, limit)+  ylim(-limit, limit) + theme_bw()+ geom_abline(intercept = 0,linetype=1)+ geom_abline(intercept = -threshold,linetype=2)+ geom_abline(intercept = threshold,linetype=2)+ labs(x=paste("scaled varImp ",gsub("\\."," ",a_comb),sep=""), y = paste("scaled varImp ",gsub("\\."," ",b_comb),sep=""))+ geom_text())
+		dev.off()
+	}	
+}
+
+
+##########################################################################################################################################
+# Run random forest for first block
+# Relace * in the colnames
+df_id_replacement<-data.frame(ID=colnames(joint_molecules_multiblock1),Replacement=gsub("\\*","b",gsub("\\-","_",colnames(joint_molecules_multiblock1))))
+
+# Rownames
+rownames(df_id_replacement)<-df_id_replacement$ID
+
+# Replace colnames
+colnames(joint_molecules_logMeanCenter_multiblock1_work)[which(colnames(joint_molecules_logMeanCenter_multiblock1_work) %in% df_id_replacement$ID)]<-as.vector(df_id_replacement[colnames(joint_molecules_logMeanCenter_multiblock1_work)[which(colnames(joint_molecules_logMeanCenter_multiblock1_work) %in% df_id_replacement$ID)],"Replacement"])
+
+# Take the molecules belonging to that signature	
+variable_signature<-colnames(merged_signatures)[c(4:58)]
+
+# Filter the molecules
+variable_signature<-variable_signature[which(!grepl(":", variable_signature))]
+
+# Replace dmt and smoking
+variable_signature<-gsub("DMT2","DMT2_known",gsub("Smoking","Smoking_known",variable_signature))
+
+# Select subset of variables
+joint_molecules_subset<-joint_molecules_logMeanCenter_multiblock1_work[,c(gsub("\\*","b",gsub("\\-","_",variable_signature)),"Ischemia","Sex","Age")]
+
+# Create formula
+formula.full=paste("Ischemia ~ Age + Sex + ",paste(paste0("`", gsub("DMT2","DMT2_known",gsub("Smoking","Smoking_known",variable_signature)), "`"),collapse=" + "),sep="")
+
+# Fit randomForest for first block
+# Run vsurf
+Boruta_multiblock1<-Boruta(formula=as.formula(paste("Ischemia ~ ",paste(paste0("`", c(gsub("\\*","b",gsub("\\-","_",variable_signature)),"Sex","Age"), "`"),collapse=" + "),sep="")), data=joint_molecules_subset)
+VSURF_multiblock1<-VSURF(formula=as.formula(paste("Ischemia ~ ",paste(paste0("`", c(gsub("\\*","b",gsub("\\-","_",variable_signature)),"Sex","Age"), "`"),collapse=" + "),sep="")), data=joint_molecules_subset)
+
+
+# Save table for VSURF
+saveRDS(joint_molecules_subset, file = paste(outputfolder,paste("joint_molecules_subset","",".rds",sep=""),sep="/"))
+# Save formula for VSURF
+saveRDS(paste("Ischemia ~ ",paste(paste0("`", c(gsub("\\*","b",gsub("\\-","_",variable_signature)),"Sex","Age"), "`"),collapse=" + "),sep=""), file = paste(outputfolder,paste("formula","",".rds",sep=""),sep="/"))
+
+# Save data
+joint_molecules_subset<-readRDS(file = "C:/Users/fv2/Documents/joint_molecules_subset.rds")
+formula<-readRDS(file = "C:/Users/fv2/Documents/formula.rds")
+VSURF_multiblock1<-VSURF(formula=as.formula(formula), data=joint_molecules_subset)
+
+# Create the plot
+print(paste(outputfolder,paste("boruta_multiblock1.png",sep=""),sep="/"))
+Cairo(width = 20.0, height = 7.0, units = 'in', res = 600, file=paste(outputfolder,paste("boruta_multiblock1.png",sep=""),sep="/"), type="png", bg="white")					
+	par(mar=c(7,5,1,1))
+	plot(Boruta_multiblock1,las=2,xlab = "")
+dev.off()
+
+png(width = 10.0, height = 5, units = 'in', res = 600, file="C:/Users/fv2/Documents/plot_cv_results.png")			
+	par(mar=c(5,5,5,5),las=2,cex.axis = 0.6,mgp=c(0,0.5,0),oma = c(0.2, 0.2, 0.2, 0.2))
+	plot(VSURF_multiblock1,var.names = TRUE)	
+dev.off()
+
+
+
+##########################################################################
+
+# Create 3d plot
+# volcano is a numeric matrix that ships with R
+library(rgl)
+library("plot3D")
+
+
+joint_molecules_logMeanCenter$Ischemia<-CAD_Patients_Age[rownames(joint_molecules_logMeanCenter),"Ischemia"]
+
+# Save table
+saveRDS(joint_molecules_logMeanCenter, file = paste(outputfolder,paste("joint_molecules_logMeanCenter","",".rds",sep=""),sep="/"))
+
+# Load table
+joint_molecules_logMeanCenter<-readRDS(file = "C:/Users/fv2/Documents/joint_molecules_logMeanCenter.rds")
+
+# Create plot
+scatter3d(,xlab = "PC_ae_C34_2", ylab = "PC_ae_C34_3",    zlab = "SM_C26_1", surface=FALSE)
+
+
+ 
+# Add small dots on basal plane and on the depth plane
+scatter3D_fancy <- function(x, y, z,..., colvar = z)
+{
+	panelfirst <- function(pmat) 
+	{
+	  XY <- trans3D(x, y, z = rep(min(z), length(z)), pmat = pmat)
+	  scatter2D(XY$x, XY$y, colvar = colvar, pch = ".",col =c("#000000","#E69F00"),
+			  cex = 2, add = TRUE, colkey = FALSE)
+
+	  XY <- trans3D(x = rep(min(x), length(x)), y, z, pmat = pmat)
+	  scatter2D(XY$x, XY$y, colvar = colvar, pch = ".", col =c("#000000","#E69F00"), 
+			  cex = 2, add = TRUE, colkey = FALSE)
+			  
+			  
+	}
+	scatter3D(x, y, z, ..., colvar = colvar, panel.first=panelfirst,
+	colkey = list(length = 0.5, width = 0.5, cex.clab = 0.75)) 
+}
+
+# Create plot
+scatter3D_fancy(x = joint_molecules_logMeanCenter$PC_ae_C34_2, y = joint_molecules_logMeanCenter$PC_ae_C34_3, z = joint_molecules_logMeanCenter$SM_C26_1,  col =c("#000000","#E69F00"), colvar=as.numeric(joint_molecules_logMeanCenter$Ischemia)-1, phi = 0, bty = "g",  pch = 20, cex = 2,xlab = "PC_ae_C34_2", ylab = "PC_ae_C34_3", zlab = "SM_C26_1")
+
+library("mclust")
+library("ggplot2")
+
+# Calc density
+joint_molecules_logMeanCenter$Density<-densityMclust(joint_molecules_logMeanCenter[,c("PC_ae_C34_2","PC_ae_C34_3")])$density
+
+# Create density plot
+density_plot <- ggplot(joint_molecules_logMeanCenter, aes(x=PC_ae_C34_2, y=PC_ae_C34_3,z=Density,Group=Ischemia,color=Ischemia))+ geom_point(size = 0.9)+theme_bw()+ scale_color_manual(values=c("#000000","#E69F00"))
+
+# Create density plot
+Figure1 <-density_plot + stat_density_2d(geom = "polygon", aes(alpha = ..level.., fill = Ischemia),bins=2)+scale_fill_manual(values = c("#000000","#E69F00"))+ scale_alpha(guide = 'none')+ theme(legend.title = element_blank()) +theme(  plot.title = element_blank())
+
+# Calc density
+joint_molecules_logMeanCenter$Density<-densityMclust(joint_molecules_logMeanCenter[,c("PC_ae_C34_2","SM_C26_1")])$density
+
+# Create density plot
+density_plot <- ggplot(joint_molecules_logMeanCenter, aes(x=PC_ae_C34_2, y=SM_C26_1,z=Density,Group=Ischemia,color=Ischemia))+ geom_point(size = 0.9)+theme_bw()+ scale_color_manual(values=c("#000000","#E69F00"))
+
+# Create density plot
+Figure2 <-density_plot + stat_density_2d(geom = "polygon", aes(alpha = ..level.., fill = Ischemia),bins=2)+scale_fill_manual(values = c("#000000","#E69F00"))+ scale_alpha(guide = 'none')+ theme(legend.title = element_blank()) +theme(  plot.title = element_blank())
+
+# Calc density
+joint_molecules_logMeanCenter$Density<-densityMclust(joint_molecules_logMeanCenter[,c("PC_ae_C34_3","SM_C26_1")])$density
+
+# Create density plot
+density_plot <- ggplot(joint_molecules_logMeanCenter, aes(x=PC_ae_C34_3, y=SM_C26_1,z=Density,Group=Ischemia,color=Ischemia))+ geom_point(size = 0.9)+theme_bw()+ scale_color_manual(values=c("#000000","#E69F00"))
+
+# Create density plot
+Figure3 <-density_plot + stat_density_2d(geom = "polygon", aes(alpha = ..level.., fill = Ischemia),bins=2)+scale_fill_manual(values = c("#000000","#E69F00"))+ scale_alpha(guide = 'none')+ theme(legend.title = element_blank()) +theme(  plot.title = element_blank())
+
+# Save plot
+ggarrange(Figure1,Figure2,Figure3,ncol = 3, nrow = 1,common.legend = TRUE)
+
+# Create tertile for PC_ae_C34_2
+library("dplyr")
+joint_molecules_logMeanCenter$PC_ae_C34_2_Tertile<-factor(ntile(joint_molecules_logMeanCenter$PC_ae_C34_2, 3)	)
+joint_molecules_logMeanCenter$PC_ae_C34_3_Tertile<-factor(ntile(joint_molecules_logMeanCenter$PC_ae_C34_3, 3)	)
+joint_molecules_logMeanCenter$SM_C26_1_Tertile<-factor(ntile(joint_molecules_logMeanCenter$SM_C26_1, 3)	)
+
+# Create formulas for the each interaction
+formula.interaction1<-formula("Ischemia ~ PC_ae_C34_2_Tertile + PC_ae_C34_3 + PC_ae_C34_2_Tertile*PC_ae_C34_3")
+formula.interaction2<-formula("Ischemia ~ PC_ae_C34_2_Tertile + SM_C26_1 + PC_ae_C34_2_Tertile*SM_C26_1")
+formula.interaction3<-formula("Ischemia ~ PC_ae_C34_3_Tertile + SM_C26_1 + PC_ae_C34_3_Tertile*SM_C26_1")
+
+
+glm.interaction1<- glm(formula=formula.interaction1,family=binomial(link='logit'), data=joint_molecules_logMeanCenter, na.action=na.omit)
+glm.interaction2<- glm(formula=formula.interaction2,family=binomial(link='logit'), data=joint_molecules_logMeanCenter, na.action=na.omit)
+glm.interaction3<- glm(formula=formula.interaction3,family=binomial(link='logit'), data=joint_molecules_logMeanCenter, na.action=na.omit)
+
+
+# Create formulas for the each interaction
+formula.interaction1<-formula("Ischemia ~ PC_ae_C34_2 + PC_ae_C34_3 + PC_ae_C34_2*PC_ae_C34_3")
+formula.interaction1<-formula("Ischemia ~ PC_ae_C34_2 + SM_C26_1 + PC_ae_C34_2*SM_C26_1")
+formula.interaction1<-formula("Ischemia ~ PC_ae_C34_3 + SM_C26_1 + PC_ae_C34_3*SM_C26_1")
+
+glm.interaction1<- glm(formula=formula.interaction1,family=binomial(link='logit'), data=joint_molecules_logMeanCenter, na.action=na.omit)
+##########################################################################
+# Read table
+# Load table
+table_miR10a<-read.table(file = "C:/Users/fv2/Documents/PREMED-CAD/miR10a_target.txt",header=FALSE)
+table_miR183<-read.table(file = "C:/Users/fv2/Documents/PREMED-CAD/miR183_target.txt",header=FALSE)
+table_miR146b5p<-read.table(file = "C:/Users/fv2/Documents/PREMED-CAD/miR146b5p_target.txt",header=FALSE)
+table_miR500b<-read.table(file = "C:/Users/fv2/Documents/PREMED-CAD/miR500b_target.txt",header=FALSE)
+table_miR335b<-read.table(file = "C:/Users/fv2/Documents/PREMED-CAD/miR335b_target.txt",header=FALSE)
+table_miR212<-read.table(file = "C:/Users/fv2/Documents/PREMED-CAD/miR212_target.txt",header=FALSE)
+table_miR660<-read.table(file = "C:/Users/fv2/Documents/PREMED-CAD/miR660_target.txt",header=FALSE)
+table_miR502<-read.table(file = "C:/Users/fv2/Documents/PREMED-CAD/miR502_target.txt",header=FALSE)
+table_miR1914<-read.table(file = "C:/Users/fv2/Documents/PREMED-CAD/miR1914_target.txt",header=FALSE)
+
+##########################################################################
+# Cluster profile analysis
+library(clusterProfiler)
+library("org.Hs.eg.db")
+
+
+# Get genes list
+gene.miR10a <- bitr(levels(table_miR10a$V2), fromType = "SYMBOL", toType = c("ENSEMBL", "SYMBOL","ENTREZID"), OrgDb = org.Hs.eg.db)
+gene.miR183 <- bitr(levels(table_miR183$V2), fromType = "SYMBOL", toType = c("ENSEMBL", "SYMBOL","ENTREZID"), OrgDb = org.Hs.eg.db)
+gene.miR146b5p <- bitr(levels(table_miR146b5p$V2), fromType = "SYMBOL", toType = c("ENSEMBL", "SYMBOL","ENTREZID"), OrgDb = org.Hs.eg.db)
+gene.miR500b <- bitr(levels(table_miR500b$V2), fromType = "SYMBOL", toType = c("ENSEMBL", "SYMBOL","ENTREZID"), OrgDb = org.Hs.eg.db)
+gene.miR335b <- bitr(levels(table_miR335b$V2), fromType = "SYMBOL", toType = c("ENSEMBL", "SYMBOL","ENTREZID"), OrgDb = org.Hs.eg.db)
+gene.miR212 <- bitr(levels(table_miR212$V2), fromType = "SYMBOL", toType = c("ENSEMBL", "SYMBOL","ENTREZID"), OrgDb = org.Hs.eg.db)
+gene.miR660 <- bitr(levels(table_miR660$V2), fromType = "SYMBOL", toType = c("ENSEMBL", "SYMBOL","ENTREZID"), OrgDb = org.Hs.eg.db)
+gene.miR502 <- bitr(levels(table_miR502$V2), fromType = "SYMBOL", toType = c("ENSEMBL", "SYMBOL","ENTREZID"), OrgDb = org.Hs.eg.db)
+gene.miR1914 <- bitr(levels(table_miR1914$V2), fromType = "SYMBOL", toType = c("ENSEMBL", "SYMBOL","ENTREZID"), OrgDb = org.Hs.eg.db)
+
+# Disease enrichment
+disease.miR10a <- enrichDO(gene          = gene.miR10a$ENTREZID,              ont           = "DO",              pvalueCutoff  = 0.1,              pAdjustMethod = "BH",                            minGSSize     = 5,              maxGSSize     = 500,              qvalueCutoff  = 0.05,              readable      = FALSE)
+disease.miR183 <- enrichDO(gene          = gene.miR183$ENTREZID,              ont           = "DO",              pvalueCutoff  = 0.1,              pAdjustMethod = "BH",                            minGSSize     = 5,              maxGSSize     = 500,              qvalueCutoff  = 0.05,              readable      = FALSE)
+disease.miR146b5p <- enrichDO(gene          = gene.miR146b5p$ENTREZID,              ont           = "DO",              pvalueCutoff  = 0.1,              pAdjustMethod = "BH",                            minGSSize     = 5,              maxGSSize     = 500,              qvalueCutoff  = 0.05,              readable      = FALSE)
+disease.miR500b <- enrichDO(gene          = gene.miR500b$ENTREZID,              ont           = "DO",              pvalueCutoff  = 0.1,              pAdjustMethod = "BH",                            minGSSize     = 5,              maxGSSize     = 500,              qvalueCutoff  = 0.05,              readable      = FALSE)
+disease.miR335b <- enrichDO(gene          = gene.miR335b$ENTREZID,              ont           = "DO",              pvalueCutoff  = 0.1,              pAdjustMethod = "BH",                            minGSSize     = 5,              maxGSSize     = 500,              qvalueCutoff  = 0.05,              readable      = FALSE)
+disease.miR212 <- enrichDO(gene          = gene.miR212$ENTREZID,              ont           = "DO",              pvalueCutoff  = 0.1,              pAdjustMethod = "BH",                            minGSSize     = 5,              maxGSSize     = 500,              qvalueCutoff  = 0.05,              readable      = FALSE)
+disease.miR660 <- enrichDO(gene          = gene.miR660$ENTREZID,              ont           = "DO",              pvalueCutoff  = 0.1,              pAdjustMethod = "BH",                            minGSSize     = 5,              maxGSSize     = 500,              qvalueCutoff  = 0.05,              readable      = FALSE)
+disease.miR502 <- enrichDO(gene          = gene.miR502$ENTREZID,              ont           = "DO",              pvalueCutoff  = 0.1,              pAdjustMethod = "BH",                            minGSSize     = 5,              maxGSSize     = 500,              qvalueCutoff  = 0.05,              readable      = FALSE)
+disease.miR1914 <- enrichDO(gene          = gene.miR1914$ENTREZID,              ont           = "DO",              pvalueCutoff  = 0.1,              pAdjustMethod = "BH",                            minGSSize     = 5,              maxGSSize     = 500,              qvalueCutoff  = 0.05,              readable      = FALSE)
+
+# Create enrtez id list
+entrez_id<-list()
+
+entrez_id[["hsa-miR-10a"]]<-gene.miR10a$ENTREZID
+entrez_id[["hsa-miR-183"]]<-gene.miR183$ENTREZID
+entrez_id[["hsa-miR-146b-5p"]]<-gene.miR146b5p$ENTREZID
+entrez_id[["hsa-miR-500b"]]<-gene.miR500b$ENTREZID
+entrez_id[["hsa-miR-335"]]<-gene.miR335b$ENTREZID
+entrez_id[["hsa-miR-212"]]<-gene.miR212$ENTREZID
+entrez_id[["hsa-miR-660"]]<-gene.miR660$ENTREZID
+entrez_id[["hsa-miR-502-5p"]]<-gene.miR502$ENTREZID
+entrez_id[["hsa-miR-1914*"]]<-gene.miR1914$ENTREZID
+
+# Create enrich kegg for each of the microRNA's
+enrichKEGG.1<-enrichKEGG(entrez_id[[1]],organism="hsa", pvalueCutoff=0.05)
+enrichKEGG.2<-enrichKEGG(entrez_id[[2]],organism="hsa", pvalueCutoff=0.05)
+enrichKEGG.3<-enrichKEGG(entrez_id[[3]],organism="hsa", pvalueCutoff=0.05)
+enrichKEGG.4<-enrichKEGG(entrez_id[[4]],organism="hsa", pvalueCutoff=0.05)
+enrichKEGG.5<-enrichKEGG(entrez_id[[5]],organism="hsa", pvalueCutoff=0.05)
+enrichKEGG.6<-enrichKEGG(entrez_id[[6]],organism="hsa", pvalueCutoff=0.05)
+enrichKEGG.7<-enrichKEGG(entrez_id[[7]],organism="hsa", pvalueCutoff=0.05)
+enrichKEGG.8<-enrichKEGG(entrez_id[[8]],organism="hsa", pvalueCutoff=0.05)
+enrichKEGG.9<-enrichKEGG(entrez_id[[9]],organism="hsa", pvalueCutoff=0.05)
+
+
+# Create enrich KEGG
+enrichKEGG.1 <- setReadable(enrichKEGG.1, 'org.Hs.eg.db', 'ENTREZID')
+enrichKEGG.2 <- setReadable(enrichKEGG.2, 'org.Hs.eg.db', 'ENTREZID')
+enrichKEGG.3 <- setReadable(enrichKEGG.3, 'org.Hs.eg.db', 'ENTREZID')
+enrichKEGG.4 <- setReadable(enrichKEGG.4, 'org.Hs.eg.db', 'ENTREZID')
+enrichKEGG.5 <- setReadable(enrichKEGG.5, 'org.Hs.eg.db', 'ENTREZID')
+enrichKEGG.6 <- setReadable(enrichKEGG.6, 'org.Hs.eg.db', 'ENTREZID')
+enrichKEGG.7 <- setReadable(enrichKEGG.7, 'org.Hs.eg.db', 'ENTREZID')
+enrichKEGG.8 <- setReadable(enrichKEGG.8, 'org.Hs.eg.db', 'ENTREZID')
+enrichKEGG.9 <- setReadable(enrichKEGG.9, 'org.Hs.eg.db', 'ENTREZID')
+
+# Create gene-concept network
+cnetplot(enrichKEGG.1, showCategory = 5, fixed = TRUE)
+cnetplot(enrichKEGG.2, showCategory = 5, fixed = TRUE)
+cnetplot(enrichKEGG.3, showCategory = 5, fixed = TRUE)
+cnetplot(enrichKEGG.4, showCategory = 5, fixed = TRUE)
+cnetplot(enrichKEGG.5, showCategory = 5, fixed = TRUE)
+cnetplot(enrichKEGG.6, showCategory = 5, fixed = TRUE)
+cnetplot(enrichKEGG.7, showCategory = 5, fixed = TRUE)
+cnetplot(enrichKEGG.8, showCategory = 5, fixed = TRUE)
+cnetplot(enrichKEGG.9, showCategory = 5, fixed = TRUE)
+
+# Create kegg enrichment
+enrichKEGG <- compareCluster(entrez_id, fun="enrichKEGG",organism="hsa", pvalueCutoff=0.05)
+
+dotplot(enrichKEGG,color = NULL,)+theme(axis.text.x = element_text(angle = 90))
+
+# Here the overview of the pathways
+dotplot(enrichKEGG)
+
+# Create enrich kegg for each of the microRNA's
+enrichGO.1<-enrichGO(entrez_id[[1]],'org.Hs.eg.db', pvalueCutoff=0.05,ont = "BP")
+enrichGO.2<-enrichGO(entrez_id[[2]],'org.Hs.eg.db', pvalueCutoff=0.05,ont = "BP")
+enrichGO.3<-enrichGO(entrez_id[[3]],'org.Hs.eg.db', pvalueCutoff=0.05,ont = "BP")
+enrichGO.4<-enrichGO(entrez_id[[4]],'org.Hs.eg.db', pvalueCutoff=0.05,ont = "BP")
+enrichGO.5<-enrichGO(entrez_id[[5]],'org.Hs.eg.db', pvalueCutoff=0.05,ont = "BP")
+enrichGO.6<-enrichGO(entrez_id[[6]],'org.Hs.eg.db', pvalueCutoff=0.05,ont = "BP")
+enrichGO.7<-enrichGO(entrez_id[[7]],'org.Hs.eg.db', pvalueCutoff=0.05,ont = "BP")
+enrichGO.8<-enrichGO(entrez_id[[8]],'org.Hs.eg.db', pvalueCutoff=0.05,ont = "BP")
+enrichGO.9<-enrichGO(entrez_id[[9]],'org.Hs.eg.db', pvalueCutoff=0.05,ont = "BP")
+
+# Create enrich KEGG
+enrichGO.1 <- setReadable(enrichGO.1, 'org.Hs.eg.db', 'ENTREZID')
+enrichGO.2 <- setReadable(enrichGO.2, 'org.Hs.eg.db', 'ENTREZID')
+enrichGO.3 <- setReadable(enrichGO.3, 'org.Hs.eg.db', 'ENTREZID')
+enrichGO.4 <- setReadable(enrichGO.4, 'org.Hs.eg.db', 'ENTREZID')
+enrichGO.5 <- setReadable(enrichGO.5, 'org.Hs.eg.db', 'ENTREZID')
+enrichGO.6 <- setReadable(enrichGO.6, 'org.Hs.eg.db', 'ENTREZID')
+enrichGO.7 <- setReadable(enrichGO.7, 'org.Hs.eg.db', 'ENTREZID')
+enrichGO.8 <- setReadable(enrichGO.8, 'org.Hs.eg.db', 'ENTREZID')
+enrichGO.9 <- setReadable(enrichGO.9, 'org.Hs.eg.db', 'ENTREZID')
+
+# Create kegg enrichment
+enrichGO <- compareCluster(entrez_id, fun="enrichGO",OrgDb='org.Hs.eg.db', pvalueCutoff=0.05,ont = "BP")
+
+
+
+
+# Create gene-concept network
+cnetplot(enrichGO.1, showCategory = 3, fixed = TRUE)
+cnetplot(enrichGO.2, showCategory = 3, fixed = TRUE)
+cnetplot(enrichGO.3, showCategory = 3, fixed = TRUE)
+cnetplot(enrichGO.4, showCategory = 3, fixed = TRUE)
+cnetplot(enrichGO.5, showCategory = 3, fixed = TRUE)
+cnetplot(enrichGO.6, showCategory = 3, fixed = TRUE)
+cnetplot(enrichGO.7, showCategory = 3, fixed = TRUE)
+cnetplot(enrichGO.8, showCategory = 3, fixed = TRUE)
+cnetplot(enrichGO.9, showCategory = 3, fixed = TRUE)
+
+dotplot(enrichGO,color = NULL,)+theme(axis.text.x = element_text(angle = 90))
+
+#################################################
+# Set ids table
+metabolites_ids<-data.frame(matrix(c("Hexose","SM_C24_0","SM_C26_1","C12_1","PC_aa_C28_1","PC_ae_C34_2","PC_ae_C36_5","lysoPC_a_C18_1","lysoPC_a_C18_2","PC_ae_C40_2","PC_ae_C38_6","PC_ae_C36_2","PC_ae_C36_3","PC_ae_C42_2","SM_C26_0","SM_OH_C22_2","HMDB0000660","HMDB0011697","HMDB0029216","HMDB0002250","HMDB0007899","HMDB0008028","HMDB0008195","HMDB0010385","HMDB0010386","HMDB0011257","HMDB0011286","HMDB0011307","HMDB0011309","HMDB0011329","HMDB0011698","HMDB0013467"), ncol = 2,nrow = 16))
+
+
+
+# Rename colulmn
+colnames(metabolites_ids)<-c("name","id")
+
+# Set rownames
+rownames(metabolites_ids)<-metabolites_ids$id
+
+# Analysis of metabolites
+library(hmdbQuery)
+
+# Take a list with the diseases
+df_results_disease<-data.frame(Metabolite=c(),ID=c(),Diseases=c())
+
+# For each metablite
+for (metabolites in metabolites_ids$id)
+{
+	# Take the annotation
+	metabolite_anno = HmdbEntry(prefix = "http://www.hmdb.ca/metabolites/",id = metabolites)
+	
+	# Take the diseases
+	df_results_disease<-rbind(df_results_disease,data.frame(Metabolite=as.vector(metabolites_ids[metabolites,"name"]),ID=metabolites,Diseases=data.frame(diseases(metabolite_anno))$disease))
+}
+write.xlsx(df_results_disease, file=paste("C:/Users/fv2/Documents/","/","Diseasesn_","Mertabolites",".xlsx",sep=""), append=FALSE)
+#################################################
+
+
+##########################################################################
+# Read table
+# Load table
+table_metabolites<-read.table(file = "C:/Users/fv2/Documents/PREMED-CAD/metabolites_target.txt",header=TRUE)
+
+table_metabolites<-read.table(file = "C:/Users/fv2/Documents/PREMED-CAD/microRNA_targets.txt",header=TRUE)
+
+##########################################################################
+# Cluster profile analysis
+library(clusterProfiler)
+library("org.Hs.eg.db")
+
+# List of ids
+metabolite_targets_ids<-list()
+
+# for each column in the talbe
+for (metabolite in colnames(table_metabolites))
+{
+	# Retrieve column
+	genes<-as.vector(table_metabolites[,metabolite])
+	
+	# Remove "--"
+	genes<-genes[which(!genes %in% "--")]
+	
+	# if length of genes greater than zero 
+	if (length(genes)>0)
+	{
+		metabolite_targets_ids[[metabolite]]<-bitr(genes, fromType = "SYMBOL", toType = c("ENSEMBL", "SYMBOL","ENTREZID"), OrgDb = org.Hs.eg.db)
+	}
+}
+
+# Create enrtez id list
+entrez_id<-list()
+entrez_kegg<-list()
+entrez_go<-list()
+
+write.xlsx(unique(unlist(entrez_id)), file=paste("teste","2",".xlsx",sep=""), append=FALSE)
+
+# for each column in the talbe
+for (metabolite in colnames(table_metabolites))
+{
+
+	if(length(metabolite_targets_ids[[metabolite]]$ENTREZID)>0)
+	{
+		# Add to list
+		entrez_id[[metabolite]]<-metabolite_targets_ids[[metabolite]]$ENTREZID
+		
+		# Take keeg results
+		kegg_results<-enrichKEGG(entrez_id[[metabolite]],organism="hsa", pvalueCutoff=0.05)
+		
+		# If length greater than zero
+		if(length(kegg_results)>0)
+		{		
+			# Create enrich kegg for each of the microRNA's
+			entrez_kegg[[metabolite]]<-setReadable(kegg_results, 'org.Hs.eg.db', 'ENTREZID')		
+		}	
+		# Take go results
+		go_results<-enrichGO(entrez_id[[metabolite]],'org.Hs.eg.db', pvalueCutoff=0.05,ont = "BP")
+		
+		# If length greater than zero
+		if(length(kegg_results)>0)
+		{		
+			# Create enrich go for each of the microRNA's
+			entrez_go[[metabolite]]<-setReadable(go_results, 'org.Hs.eg.db', 'ENTREZID')
+		}		
+		
+		
+	}	
+}
+# Create kegg enrichment
+enrichKEGG <- compareCluster(entrez_id, fun="enrichKEGG",organism="hsa", pvalueCutoff=0.05,minGSSize = 10)
+
+# Create kegg enrichment
+enrichGO <- compareCluster(entrez_id, fun="enrichGO",OrgDb='org.Hs.eg.db', pvalueCutoff=0.01,ont = "BP")
+
+dotplot(enrichKEGG,color = NULL,)+theme(axis.text.x = element_text(angle = 90))
+
+dotplot(simplify(enrichGO),color = NULL,)+theme(axis.text.x = element_text(angle = 90))
+
+
+
+##########################################################################
+# Let's create the table
+#full_table<-read.xlsx(paste(outputfolder,"/hsa_MTI.xlsx",sep=""),startRow = 1, sheetIndex=1)
+full_table<-read.table(paste(outputfolder,"/full_table.txt",sep=""),header=TRUE)
+
+# Fitler table for the first occurance
+full_table <- full_table[match(unique(full_table$Gene_id), full_table$Gene_id),]
+
+# Let's take the correlation table
+#correlation_table<-read.xlsx(paste(outputfolder,"/hsa_MTI.xlsx",sep=""),startRow = 1, sheetIndex=2)
+correlation_table<-read.table(paste(outputfolder,"/correlation.txt",sep=""),header=TRUE)
+
+# Set upper case id
+full_table$miRNA2<-toupper(full_table$miRNA)
+
+# For each row
+for (row_mir in unique(full_table$miRNA2))
+{
+	# Take the id in the full table
+	id_full_table<-row_mir
+	
+	# Take the id of the match
+	id_match<-which(grepl(gsub("-5P","",gsub("-3P","",id_full_table)),toupper(correlation_table$mirna_base)))
+	
+	# Take the genes of this miR
+	# Then for each gene
+	for (row_gene in rownames(full_table[which(full_table$miRNA2==row_mir),]))
+	{
+		# Take the gene nale
+		gene_name<-as.vector(full_table[row_gene,"Gene_name"])
+		
+		# Take the correlation between the two
+		correlation<-as.numeric(as.vector(correlation_table[which(toupper(correlation_table$mirna_base)==gsub("-5P","",gsub("-3P","",id_full_table)) & correlation_table$feature==gene_name),"cor"]))
+		
+		print(correlation)
+	}
+	
+	
+	as.vector(full_table[which(full_table$miRNA2==row_mir),])
+	
+	
+	
+	correlation_table[,]
+	
+	correlation_table
+	
+	
+	print(id_match)	
+}
+###################################
+library(igraph)
+# MicroRNAs
+microRNAs<-c("hsa-miR-10a-5p","hsa-miR-183-5p","hsa-miR-500b-5p","hsa-miR-146b-5p","hsa-miR-335-5p","hsa-miR-212-5p","hsa-miR-660-5p","hsa-miR-502-5p","hsa-miR-1914-3p")
+
+# Create table
+target_degree<-data.frame(microRNA=c(),Correlated=c(),Degree=c())
+
+# For each microRNA
+for (microRNA in microRNAs[c(!microRNAs %in% "hsa-miR-500b-5p")])
+{
+	# First read the networks
+	targets_microRNA<-read.xlsx(paste(outputfolder,"/Validated_Correlated.xlsx",sep=""),startRow = 1, sheetName=microRNA)
+	network_microRNA<-read.xlsx(paste(outputfolder,"/Network_Validated_Correlated.xlsx",sep=""),startRow = 1, sheetName=microRNA)
+	
+	# Create newtwork
+	g0<-graph_from_edgelist(as.matrix(network_microRNA[,c("Gene.1","Gene.2")]), directed = FALSE)				
+			
+	# For each target
+	for (target in intersect(as.vector(targets_microRNA$Network),names(V(g0))))
+	{
+		print(target)
+		# Calculate the number of connections of this taget with the validated network
+		g0_subgraph<-subgraph(g0, which(names(V(g0)) %in% unique(c(target,as.vector(targets_microRNA$Validated)))))
+		
+		# Remocve redundance
+		g0_subgraph<-simplify(g0_subgraph, remove.multiple = TRUE, remove.loops = TRUE)		
+		
+		# Bind results
+		target_degree<-rbind(target_degree,data.frame(microRNA=microRNA,Correlated=target,Degree=degree(g0_subgraph)[target]))		
+	}	
+}
+####################################
+# Create network graphs for each correlated target with dregree greater than 3
+target_degree_network<-target_degree[which(target_degree$Degree>=2),]
+
+# Cor each correlated target
+for (target_correlated in rownames(target_degree_network))
+{	
+	# Take also the microRNA
+	microRNA<-as.vector(target_degree_network[target_correlated,"microRNA"])
+		
+	# Take network
+	network_microRNA<-read.xlsx(paste(outputfolder,"/Network_Validated_Correlated.xlsx",sep=""),startRow = 1, sheetName=microRNA)
+	targets_microRNA<-read.xlsx(paste(outputfolder,"/Validated_Correlated.xlsx",sep=""),startRow = 1, sheetName=microRNA)
+	
+	# Create newtwork
+	g0<-graph_from_edgelist(as.matrix(network_microRNA[,c("Gene.1","Gene.2")]), directed = FALSE)					
+	
+	# If the targe tis respresented
+	if(sum(names(V(g0))==target_correlated)>0)
+	{
+		
+		# Take the targets
+		validated_targets_interactions<-intersect(names(adjacent_vertices(g0, V(g0)[which(names(V(g0))==target_correlated)])[[1]]),as.vector(targets_microRNA$Validated))
+		
+		# Calculate the number of connections of this taget with the validated network
+		g0_subgraph<-subgraph(g0, validated_targets_interactions)		
+		
+		# Set attributes
+		g0_subgraph<-set_vertex_attr(g0_subgraph, "type", index = V(g0_subgraph), "experimental_targets")
+		
+		# Crete microRNA grapgh	
+		g1<-graph_from_edgelist(as.matrix(data.frame(microRNA=microRNA,targets=names(V(g0_subgraph)))), directed = FALSE)	
+		
+		# Crete microRNA grapgh	
+		g2<-graph_from_edgelist(as.matrix(data.frame(target=names(V(g0_subgraph)),targets=target_correlated)),directed = FALSE)
+		
+		# Union of the graphs
+		g_union<-g0_subgraph %u% g1 %u% g2
+		
+		
+			
+		# Set attributes
+		g_union<-set_vertex_attr(g_union, "type", index = V(g_union)[names(V(g_union)) %in% names(V(g0_subgraph))], "experimental_targets")
+		g_union<-set_vertex_attr(g_union, "type", index = V(g_union)[names(V(g_union)) %in% microRNA], "microRNA")
+		g_union<-set_vertex_attr(g_union, "type", index = V(g_union)[names(V(g_union)) %in% target_correlated], "correlated_gene")
+		
+		# For each edge of the graph
+		for (graph_egde in 1:dim(as_edgelist(g_union))[1])
+		{		
+			# Start results
+			results_rbind<-data.frame()
+		
+			# Take results for that edge
+			results_rbind<-rbind(network_microRNA[which(network_microRNA$Gene.1==as_edgelist(g_union)[graph_egde,1] & network_microRNA$Gene.2==as_edgelist(g_union)[graph_egde,2]),],
+	network_microRNA[which(network_microRNA$Gene.1==as_edgelist(g_union)[graph_egde,2] & network_microRNA$Gene.2==as_edgelist(g_union)[graph_egde,1]),])
+
+			# If there is weight
+			if(dim(results_rbind)[1]>0)
+			{
+				# Set attributes
+				g_union<-set_edge_attr(g_union, "weight", index = E(g_union)[graph_egde], as.vector(results_rbind[1,"Weight"]))
+			}else
+			{				
+				# Set attributes
+				g_union<-set_edge_attr(g_union, "weight", index = E(g_union)[graph_egde], 0.25)				
+			}
+			
+		}	
+		# Determine positioning by number of targets
+		if(length(validated_targets_interactions)==2)
+		{
+			# Set poistion
+			position<-c(-1,1)
+		}	
+		
+		# Determine positioning by number of targets
+		if(length(validated_targets_interactions)==3)
+		{
+			# Set poistion
+			position<-c(-1,0,1)
+		}
+		if(length(validated_targets_interactions)==4)
+		{
+			# Set poistion
+			position<-c(-2,-1,1,2)
+		}
+		if(length(validated_targets_interactions)==5)
+		{
+			# Set poistion
+			position<-c(-2,-1,0,1,2)
+		}
+		# Set layout
+		layout<-data.frame(matrix(0, nrow = length(V(g_union)), ncol = 2))
+
+		# Set layout of microRNA
+		layout[which(names(V(g_union))==microRNA),2]<-2
+		layout[which(names(V(g_union))==microRNA),1]<-0
+
+		# Set layout of correlated
+		layout[which(names(V(g_union))==target_correlated),2]<-0
+		layout[which(names(V(g_union))==target_correlated),1]<-0
+
+		# Set layout of correlated
+		layout[which(names(V(g_union)) %in% validated_targets_interactions),2]<-1
+		layout[which(names(V(g_union)) %in% validated_targets_interactions),1]<-position
+
+
+		# Set all black
+		V(g_union)$color <- "grey"
+
+		# Set the colors 
+		V(g_union)$color[which(vertex_attr(g_union, "type", index = V(g_union))=="microRNA")]<-"lightblue"
+		V(g_union)$color[which(vertex_attr(g_union, "type", index = V(g_union))=="experimental_targets")]<-"orange"
+
+		#saveRDS(g_union, file = paste(outputfolder,paste("g_union","",".rds",sep=""),sep="/"))
+		#g_union<-readRDS(file = "C:/Users/fv2/Documents/g_union.rds")
+		#layout<-readRDS(file = "C:/Users/fv2/Documents/layout.rds")
+
+		# Set width
+		E(g_union)$width<-as.numeric(edge_attr(g_union, "weight", index = E(g_union)))
+
+		# Which ones are different than 0.5
+		E(g_union)$width[which(E(g_union)$width!=0.5)]<-E(g_union)$width[which(E(g_union)$width!=0.25)]*250	
+		
+		# Scale down to 2
+		E(g_union)$width[which(E(g_union)$width>2)]<-2
+		
+	
+		# Vector results
+		result_vector1<-c()
+		
+		#for each sintr pair
+		for (str_pain in 1:length(strsplit(as_ids(E(g_union)),"|", fixed=TRUE)))
+		{
+			# Get the pair
+			str1<-strsplit(as_ids(E(g_union)),"|", fixed=TRUE)[[str_pain]][[1]]
+			str2<-strsplit(as_ids(E(g_union)),"|", fixed=TRUE)[[str_pain]][[2]]
+			
+			result_vector1<-c(result_vector1,paste(sort(c(str1,str2)),collapse="|"))
+		}
+		
+		# Vector results
+		result_vector2<-c()
+		
+		#for each sintr pair
+		for (str_pain in 1:length(strsplit(as_ids(E(g1)),"|", fixed=TRUE)))
+		{
+			# Get the pair
+			str1<-strsplit(as_ids(E(g1)),"|", fixed=TRUE)[[str_pain]][[1]]
+			str2<-strsplit(as_ids(E(g1)),"|", fixed=TRUE)[[str_pain]][[2]]
+			
+			result_vector2<-c(result_vector2,paste(sort(c(str1,str2)),collapse="|"))
+		}
+		# Solid lines
+		E(g_union)$lwd<-"#000000"
+		
+		# Dashed lines
+		E(g_union)[which(result_vector1 %in% result_vector2)]$lwd<-"#800080"
+		
+
+		# Crete microRNA grapgh	
+		#g_m<-graph_from_edgelist(as.matrix(data.frame(microRNA=microRNA,targets=target_correlated)),directed = FALSE)
+		
+		# Union of the graphs
+		#g_union<-union(g_union,g_m, byname = "auto")	
+		
+		# Make edges curved:
+		E(g_union)$curved <- 0.0	
+		
+		# Set distaces	
+		V(g_union)$distance=3
+		V(g_union)$distance[which(names(V(g_union))==microRNA)]<-(-2)
+		
+		
+		
+		# Save plot
+		Cairo(width = 6.0, height = 6.0, units = 'in', res = 300, file=paste(outputfolder,paste(paste(gsub("-","_",microRNA),target_correlated,sep="_"),".png",sep=""),sep="/"), type="png", bg="white")		
+			# Create plot
+			plot(g_union, layout=as.matrix(layout),vertex.color=V(g_union)$color,edge.width=E(g_union)$width*5,edge.color=E(g_union)$lwd, vertex.label.dist=V(g_union)$distance, vertex.label.degree=pi/2)	
+		dev.off()
+	}
+	
+}
+
+
+saveRDS(layout, file = paste(outputfolder,paste("layout","",".rds",sep=""),sep="/"))
+saveRDS(g_union, file = paste(outputfolder,paste("g_union","",".rds",sep=""),sep="/"))
+
+#######################
+# Create vennDiagram
+library("VennDiagram")
+#library("KEGGprofile")
+library(venneuler)
+library("nVennR")
+library("nVennR")
+# Save the biomarkers
+#table_biomarkers<-read.table(file = "C:/Users/fv2/Documents/overlap.signature.txt",header =TRUE)
+table_biomarkers<-read.table(file = paste(outputfolder,"/overlap.signature.txt",sep=""),header =TRUE)
+
+# Set rownames
+rownames(table_biomarkers)<-table_biomarkers$Signature
+
+# Drop first columns
+table_biomarkers<-table_biomarkers[,-c(1)]
+
+# List of signature
+list_biomolecules<-list()
+
+# For each signature
+for (signature in rownames(table_biomarkers))
+{
+	# Add signature
+	list_biomolecules[[signature]]<-colnames(table_biomarkers[signature,which(table_biomarkers[signature,]=="+")])
+}
+# Reduce size
+venn(list_biomolecules[c("Signature1","Signature2","Signature3","Signature4")])
