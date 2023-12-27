@@ -1,0 +1,40 @@
+library("SHAPforxgboost")
+library("shapper")
+library("DALEX")
+library("xgboost")
+library("xgboost")
+########################################################################
+splits$train<-joint_molecules_logMeanCenter_work[,c(selected,"Ischemia")]
+splits$valid<-joint_molecules_logMeanCenter_work[,c(selected,"Ischemia")]
+
+# Set parameters
+param = list(objective="reg:linear", eta=0.01, min_child_weight=5, subsample=0.8, colsample_bytree=0.8, max_depth=5, scale_pos_weight=1.0)
+
+
+# To prepare the long-format data:
+shap_long <- shap.prep(xgb_model = tree_model, X_train = splits$train)
+
+# Contrstuc xgboost
+dtrain <- xgb.DMatrix(as.matrix(splits$train[,-which(colnames(splits$train)=="Ischemia")]),label=as.numeric(splits$train[,which(colnames(splits$train)=="Ischemia")])-1)
+dtest <- xgb.DMatrix(as.matrix(splits$valid[,-which(colnames(splits$valid)=="Ischemia")]),label=as.numeric(splits$valid[,which(colnames(splits$valid)=="Ischemia")])-1)
+
+
+bstDMatrix <- xgb.train(param, data = dtrain,nrounds = 1500)
+
+pred <- predict(bstDMatrix, as.matrix(splits$valid[,-which(colnames(splits$valid)=="Ischemia")]))
+prediction <- as.numeric(pred > 0.5)
+shap_values <- shap.values(xgb_model = bstDMatrix, X_train = as.matrix(splits$train[,-which(colnames(splits$train)=="Ischemia")]))
+
+# To prepare the long-format data:
+shap_long <- shap.prep(xgb_model = bstDMatrix, X_train =  as.matrix(splits$train[,-which(colnames(splits$train)=="Ischemia")]))
+
+# is the same as: using given shap_contrib
+p1 <- shap.plot.dependence(data_long = shap_long, y = 'hsa_miR_10a', x = 'PC_aa_C28_1', color_feature = 'PC_aa_C28_1') +  ggtitle("(A) SHAP values of hsa_miR_10a vs. PC_aa_C28_1")+scale_color_viridis()
+p2 <- shap.plot.dependence(data_long = shap_long, y = 'hsa_miR_10a', x = 'PC_ae_C34_2', color_feature = 'PC_ae_C34_2') +  ggtitle("(B) SHAP values of hsa_miR_10a vs. PC_ae_C34_2")+scale_color_viridis()
+p3 <- shap.plot.dependence(data_long = shap_long, y = 'hsa_miR_10a', x = 'PC_ae_C36_3', color_feature = 'PC_ae_C36_3') +  ggtitle("(B) SHAP values of hsa_miR_10a vs. PC_ae_C36_3")+scale_color_viridis()
+
+	png(width = 12, height = 10, units = 'in', res = 600, file="/tmp/intervals_featureweight_all.png")				
+		ggarrange(plotlist=list(p1,p2,p2),  common.legend = FALSE)
+	dev.off()
+
+
